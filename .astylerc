@@ -1,0 +1,53 @@
+#======================================================
+#   Configuration file for AStyle
+#
+#   Other conventions not automatically corrected:
+#   -   Name functions with camel case: "myFunction"
+#
+#   -   Name variables, enum and struct names in
+#       lowercase with underscores: "my_variable"
+#
+#   -   Name files in lowercase with either dash
+#       or underscore as spaces: "my-file"
+#======================================================
+
+#----------------------------
+#   Bracket style
+#----------------------------
+
+--style=1tbs                # "One True Brace Style"
+
+#----------------------------
+#   Tab options
+#----------------------------
+
+--indent=spaces=4
+
+#----------------------------
+#   Padding options
+#----------------------------
+
+--break-blocks              # Pad empty lines around header blocks (e.g. 'if', 'for', 'while'...)
+
+--pad-oper                  # Insert space padding around operators.
+
+--pad-header                # Insert space padding between a header and the following parenthesis
+
+--unpad-paren               # Remove extra space padding around parenthesis on the inside and outside
+                            # Does not override --pad-oper
+
+--align-pointer=type        # Attach pointers to the variable type: int* x
+
+#----------------------------
+#   Formatting options
+#----------------------------
+
+--keep-one-line-blocks      # Don't break one-line blocks
+
+--keep-one-line-statements  # Don't break complex statements and multiple statements residing on a single line
+
+--remove-brackets           # Remove brackets from a conditional statement if it's a single statement on a single line
+
+--convert-tabs              # Converts tabs into spaces in the non-indentation part of the line
+
+--max-code-length=100       # Max code length per line
