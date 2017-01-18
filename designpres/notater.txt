@@ -1,0 +1,31 @@
+Systemet skal være robust:
+	Det må returnere til en trygg tilstand dersom det skjer noe feil.
+	Ingen bestillinger kan tapes.
+		Alle heisene skal ha all informasjon, slik at dersom en heis dør vil ikke de andre heisene tape informasjon
+	Må kunne takle uforutsette hendelser.
+		Software redundancy:
+			Flere tråder kan gjøre samme utregning. Dersom det oppstår uenigheter vil det stemmes over hva som blir resultatet. Eller utregningen kan utføres på nytt.
+		Hardware redundancy:
+			Alle heisene gjør sine egne utregninger og sender resultatene til master. Master avgjør så hva som er det rette svaret ved avstemming. Eller ber om at utregningene skal gjøres på nytt
+
+Vi må beskrive og begrunne:
+	Nettverkstopologien
+	Modulansvar:
+		Kontroll:
+			
+			Master:
+			
+			Slave:
+		
+		Heiskontroll:
+			
+			Heisdriver:
+			
+		Heiskommunikasjon:
+			
+			Nettverk:
+			
+	
+	Andre designissues
+	
+Vi må forstå svakheter ved designet og hvordan disse kan takles
