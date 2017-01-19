@@ -29,3 +29,9 @@ Vi må beskrive og begrunne:
 	Andre designissues
 	
 Vi må forstå svakheter ved designet og hvordan disse kan takles
+
+Think about how want to move data around (reading buttons, network, setting motor & lights, state machines, etc). Do you think in a shared-variable way or a message-passing way? Will you be using concurrency at all?
+How will you split into modules? Functions, objects, threads? Think about what modules you need, and how they need to interact. This is an iterative design process that will take you many tries to get "right" (if such a thing even exists!).
+The networking part is often difficult. Can you find anything useful in the standard libraries, or other libraries?
+The elevator driver is written in C. How do you interface with C code?
+You may want to work from home, where you won't have an elevator. Does the language have a framework for making and running tests, or can you create one? Testing multithreaded code is especially difficult.
