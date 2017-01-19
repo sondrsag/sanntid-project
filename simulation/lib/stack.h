@@ -6,7 +6,7 @@
 
 typedef struct stack_node {
     struct stack_node* prev_node;
-    void* value;
+    int value;
     struct stack_node* next_node;
 } stack_node_t;
 
@@ -17,12 +17,16 @@ typedef struct stack_root {
 } stack_root_t;
 
 void stack_init(stack_root_t** stack);
-void stack_destroy(stack_root_t** stack);
 
 // Add an integer (/node) to the top of the stack
-void stack_push(stack_root_t* stack, stack_node_t* node);
+void stack_push(stack_root_t* stack, int node);
 
-// Remove and return the top node of the stack
-stack_node_t* stack_pop(stack_root_t* stack);
+// Remove and return the top node of the stack.
+// For simplification and the application in this project we assume that
+// negative node values are illegal, so -1 is returned when theres no nodes
+// in the stack.
+int stack_pop(stack_root_t* stack);
+
+bool stack_is_empty(stack_root_t* stack);
 
 #endif /* end of include guard: _STACK_H_ */

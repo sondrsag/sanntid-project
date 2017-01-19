@@ -7,60 +7,52 @@ void stack_init(stack_root_t** stack)
     (*stack)->length = 0;
 }
 
-void stack_destroy(stack_root_t** stack)
-{
-    free(*stack);
-}
 
-void stack_push(stack_root_t* stack, stack_node_t* node)
+void stack_push(stack_root_t* stack, int value)
 {
-    printf("stack push\n");
     if (stack->length > 0) {
-        node->prev_node = stack->last_node;
-        stack->last_node->next_node = node;
-        stack->last_node = node;
+        stack->last_node->next_node = malloc(sizeof(stack_node_t));
+        stack->last_node->next_node->prev_node = stack->last_node;
+        stack->last_node->next_node->next_node = NULL;
+        stack->last_node->next_node->value = value;
+        stack->last_node = stack->last_node->next_node;
         stack->length++;
-        node->next_node = NULL;
     } else {
-        stack->first_node = node;
-        stack->last_node = node;
+        stack->first_node = malloc(sizeof(stack_node_t));
+        stack->first_node->next_node = NULL;
+        stack->first_node->prev_node = NULL;
+        stack->first_node->value = value;
+        stack->last_node = stack->first_node;
         stack->length++;
-        node->prev_node = NULL
-        node->next_node = NULL;
     }
 }
 
-stack_node_t* stack_pop(stack_root_t* stack)
+int stack_pop(stack_root_t* stack)
 {
-    printf("stack pop\n");
-    if (stack->length == 0) return NULL;
+    if (stack->length == 0) return -1;
 
-    stack_node_t* return_node = stack->last_node;
-
-    if (stack->length == 1) {
-        stack->last_node = NULL;
-        stack->first_node = NULL;
-        stack->length--;
-        return return_node;
-    }
-
-    stack->last_node = return_node->prev_node;
-
-    stack->last_node->next_node = NULL;
-    return return_node;
+    int ret_value = stack->last_node->value;
+    stack_node_t* tmp = stack->last_node;
+    stack->last_node = tmp->prev_node;
+    tmp->prev_node = NULL;
+    free(tmp);
+    stack->length--;
+    return ret_value;
 }
 
-int main(int argc, char const *argv[]) {
+/*int main(int argc, char const *argv[]) {
     stack_root_t* stack;
     stack_init(&stack);
-    stack_node_t node1;
-    stack_node_t node2;
-    node1.value = (int*) 1;
-    node2.value = (int*) 2;
-    stack_push(stack, &node1);
-    stack_push(stack, &node2);
-    int* ret = stack_pop(stack)->value;
-    printf("%d\n", *ret);
-    stack_destroy(&stack);
+    stack_push(stack, 1);
+    printf("%d\n", stack->last_node->value);
+    stack_push(stack, 2);
+    printf("%d\n", stack->last_node->value);
+    stack_push(stack, 3);
+    printf("%d\n", stack->last_node->value);
+    printf("%d\n", stack_pop(stack));
+    printf("%d\n", stack_pop(stack));
+    printf("%d\n", stack_pop(stack));
+    // printf("%d\n", *ret);
+    free(stack);
     return 0;
-}
+}*/
