@@ -16,6 +16,7 @@ void stack_push(stack_root_t* stack, stack_node_t* node)
 {
     printf("stack push\n");
     if (stack->length > 0) {
+        node->prev_node = stack->last_node;
         stack->last_node->next_node = node;
         stack->last_node = node;
         stack->length++;
@@ -24,6 +25,7 @@ void stack_push(stack_root_t* stack, stack_node_t* node)
         stack->first_node = node;
         stack->last_node = node;
         stack->length++;
+        node->prev_node = NULL
         node->next_node = NULL;
     }
 }
@@ -42,11 +44,7 @@ stack_node_t* stack_pop(stack_root_t* stack)
         return return_node;
     }
 
-    stack->last_node = stack->first_node;
-
-    while (stack->last_node->next_node != return_node) {
-        stack->last_node = stack->last_node->next_node;
-    }
+    stack->last_node = return_node->prev_node;
 
     stack->last_node->next_node = NULL;
     return return_node;

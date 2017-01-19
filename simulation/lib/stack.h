@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 typedef struct stack_node {
+    struct stack_node* prev_node;
     void* value;
     struct stack_node* next_node;
 } stack_node_t;
