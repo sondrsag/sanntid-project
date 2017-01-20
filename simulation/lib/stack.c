@@ -12,9 +12,11 @@ void stackPush(stack_root_t* stack, int value)
 {
     if (stack->length > 0) {
         stack_node_t* node = stack->first_node;
+
         while (node->next_node != NULL) {
             node = node->next_node;
         }
+
         node->next_node = malloc(sizeof(stack_node_t));
         node = node->next_node;
         node->value = value;
@@ -30,7 +32,8 @@ void stackPush(stack_root_t* stack, int value)
 
 int stackPop(stack_root_t* stack)
 {
-    if (stack->length == 0) return -1;
+    if (stack->length == 0) { return -1; }
+
     if (stack->length == 1) {
         int ans = stack->first_node->value;
         free(stack->first_node);
@@ -38,10 +41,13 @@ int stackPop(stack_root_t* stack)
         stack->length--;
         return ans;
     }
+
     stack_node_t* node = stack->first_node;
+
     while (node->next_node->next_node != NULL) {
         node = node->next_node;
     }
+
     int ans = node->next_node->value;
     free(node->next_node);
     node->next_node = NULL;
