@@ -5,13 +5,13 @@
 #include <stdbool.h>
 
 typedef struct stack_node {
-    int value;
-    struct stack_node* next_node;
+        int value;
+        struct stack_node* next_node;
 } stack_node_t;
 
 typedef struct stack_root {
-    stack_node_t* first_node;
-    unsigned int length;
+        stack_node_t* first_node;
+        unsigned int length;
 } stack_root_t;
 
 void stackInit(stack_root_t** stack);
