@@ -15,8 +15,6 @@ void evalJobProgress(void);
 
 void checkInputs(void (*jobRequest)(int, int));
 
-void* openDoors(void);
-
 void* startDriver(void* args)
 {
     elev_init(ET_Simulation);
