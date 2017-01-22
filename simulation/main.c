@@ -4,19 +4,37 @@
 #include <pthread.h>
 #include "driver.h"
 
-void updateStatus(ElevatorStatus status)
+ElevatorStatus status;
+
+void updateStatus(ElevatorStatus new_status)
 {
     printf("Updated status!\n");
-    printf("floor: %d\ndirection: %d\nnext_floor: %d\n", status.current_floor,
-            status.direction, status.next_floor);
+    status = new_status;
+}
+
+void handleRequest(int button, int floor)
+{
+    printf("Requested floor: %d btn: %d\n", floor, button);
 }
 
 int main() {
     struct driver_args dargs;
     dargs.updateStatusPtr = &updateStatus;
+    dargs.jobRequestPtr = &handleRequest;
 
     pthread_t driver_thrd;
     pthread_create(&driver_thrd, NULL, startDriver, (void*)&dargs);
+    while (1) {
+        if (!status.working) {
+            drvStartJob(3);
+        }
+        if (status.current_floor == 3 && status.action == IDLE) {
+            drvStartJob(1);
+        }
+        if (status.current_floor == 1 && status.action == IDLE) {
+            return 0;
+        }
+    }
     pthread_join(driver_thrd, NULL);
     return 0;
 }

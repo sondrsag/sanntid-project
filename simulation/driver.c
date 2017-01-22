@@ -1,8 +1,11 @@
 #include "driver.h"
 #include <stdio.h>
+#include <string.h>
 #include <pthread.h>
 #include "lib/timer.h"
 
+// The values of input buttons.
+static int btn_inputs[N_FLOORS][N_BUTTONS];
 static ElevatorStatus status;
 static bool status_updated;
 static bool stopped;
@@ -10,25 +13,27 @@ static pthread_mutex_t status_mtx;
 
 void evalJobProgress(void);
 
-void checkInputs(void);
+void checkInputs(void (*jobRequest)(int, int));
 
 void* openDoors(void);
 
-void startDriver(void* args)
+void* startDriver(void* args)
 {
     elev_init(ET_Simulation);
     elev_set_motor_direction(DIRN_STOP);
 
-    struct driver_args* arguments = args;
+    memset(btn_inputs, 0, N_FLOORS * N_BUTTONS * sizeof(int));
 
+    struct driver_args* arguments = args;
     void (*updateStatus)(ElevatorStatus) = arguments->updateStatusPtr;
+    void (*jobRequest)(int, int) = arguments->jobRequestPtr;
 
     status.working = false;
     status.action = IDLE;
     status.current_floor = elev_get_floor_sensor_signal();
     status.next_floor = -1;
     status.direction = 0;
-    status_updated = false;
+    status_updated = true;
 
     if (status.current_floor == -1) {
         elev_set_motor_direction(DIRN_DOWN);
@@ -36,7 +41,6 @@ void startDriver(void* args)
         status.action = MOVING;
         status.next_floor = 0;
         status.direction = DIRN_DOWN;
-        status_updated = true;
     }
 
     while (1) {
@@ -46,7 +50,7 @@ void startDriver(void* args)
             evalJobProgress();
         }
 
-        checkInputs();
+        checkInputs(jobRequest);
 
         if (status_updated) {
             updateStatus(status);
@@ -135,12 +139,34 @@ void evalJobProgress(void)
     }
 }
 
-void checkInputs(void)
+void checkButton(elev_button_type_t button, int floor, void (*jobRequest)(int, int))
+{
+    if (button == BUTTON_CALL_DOWN && floor == 0) {
+        return;
+    } else if (button == BUTTON_CALL_UP && floor == N_FLOORS - 1) {
+        return;
+    }
+
+    if (btn_inputs[floor][button] != elev_get_button_signal(button, floor)) {
+        btn_inputs[floor][button] = elev_get_button_signal(button, floor);
+        if (btn_inputs[floor][button] != 0) {
+            jobRequest(button, floor);
+        }
+    }
+}
+
+void checkInputs(void (*jobRequest)(int, int))
 {
     // status_mtx is locked before this func is called
     if (status.current_floor != elev_get_floor_sensor_signal() &&
-        elev_get_floor_sensor_signal() != -1) {
-        printf("Checking\n");
+            elev_get_floor_sensor_signal() != -1) {
         status.current_floor = elev_get_floor_sensor_signal();
     }
+
+    for (size_t f = 0; f < N_FLOORS; f++) {
+        for (size_t b = 0; b < N_BUTTONS; b++) {
+            checkButton(b, f, jobRequest);
+        }
+    }
+
 }
