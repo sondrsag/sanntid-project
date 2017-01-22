@@ -16,10 +16,9 @@ typedef struct stack_root {
 
 void stackInit(stack_root_t** stack);
 
-// Add an integer (/node) to the top of the stack
+// Add an integer node to the top of the stack
 void stackPush(stack_root_t* stack, int node);
 
-// Remove and return the top node of the stack.
 // For simplification and the application in this project we assume that
 // negative node values are illegal, so -1 is returned when theres no nodes
 // in the stack.
