@@ -25,14 +25,14 @@ int main() {
     pthread_t driver_thrd;
     pthread_create(&driver_thrd, NULL, startDriver, (void*)&dargs);
     while (1) {
-        if (!status.working) {
-            drvStartJob(3);
+        if (status.current_floor == 1 && status.action == IDLE) {
+            break;
+        }
+        if (!status.working && status.current_floor != 3) {
+            drvStartJob(BUTTON_CALL_DOWN, 3);
         }
         if (status.current_floor == 3 && status.action == IDLE) {
-            drvStartJob(1);
-        }
-        if (status.current_floor == 1 && status.action == IDLE) {
-            return 0;
+            drvStartJob(BUTTON_CALL_UP, 1);
         }
     }
     pthread_join(driver_thrd, NULL);

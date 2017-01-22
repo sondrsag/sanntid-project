@@ -4,8 +4,9 @@
 #include <pthread.h>
 #include "lib/timer.h"
 
-// The values of input buttons.
-static int btn_inputs[N_FLOORS][N_BUTTONS];
+static int btn_inputs[N_BUTTONS][N_FLOORS]; // Status of input buttons
+static int btn_lamps[N_BUTTONS][N_FLOORS];  // Status of button lamps
+static int job_btn; // To keep track of which buttons light to switch of after current job
 static ElevatorStatus status;
 static bool status_updated;
 static bool stopped;
@@ -20,7 +21,8 @@ void* startDriver(void* args)
     elev_init(ET_Simulation);
     elev_set_motor_direction(DIRN_STOP);
 
-    memset(btn_inputs, 0, N_FLOORS * N_BUTTONS * sizeof(int));
+    memset(btn_inputs, 0, N_BUTTONS * N_FLOORS * sizeof(int));
+    memset(btn_lamps, 0, N_BUTTONS * N_FLOORS * sizeof(int));
 
     struct driver_args* arguments = args;
     void (*updateStatus)(ElevatorStatus) = arguments->updateStatusPtr;
@@ -69,7 +71,7 @@ void* startDriver(void* args)
     }
 }
 
-bool drvStartJob(int floor)
+bool drvStartJob(elev_button_type_t btn, int floor)
 {
     pthread_mutex_lock(&status_mtx);
 
@@ -86,6 +88,7 @@ bool drvStartJob(int floor)
         status.action = MOVING;
         status.next_floor = floor;
         status.direction = DIRN_UP;
+        job_btn = btn;
         status_updated = true;
         ret = true;
     } else if (floor < status.current_floor) {
@@ -94,6 +97,7 @@ bool drvStartJob(int floor)
         status.action = MOVING;
         status.next_floor = floor;
         status.direction = DIRN_DOWN;
+        job_btn = btn;
         status_updated = true;
         ret = true;
     } else if (floor == status.current_floor) {
@@ -118,6 +122,22 @@ void evalJobProgress(void)
             elev_set_motor_direction(DIRN_STOP);
             status.action = OPEN;
             status.direction = DIRN_STOP;
+
+            switch (job_btn) {
+            case BUTTON_CALL_UP:
+                elev_set_button_lamp(BUTTON_CALL_UP, status.current_floor, 0);
+                btn_lamps[BUTTON_CALL_UP][status.current_floor] = 0;
+                break;
+            case BUTTON_CALL_DOWN:
+                elev_set_button_lamp(BUTTON_CALL_DOWN, status.current_floor, 0);
+                btn_lamps[BUTTON_CALL_DOWN][status.current_floor] = 0;
+                break;
+            case BUTTON_COMMAND:
+                elev_set_button_lamp(BUTTON_COMMAND, status.current_floor, 0);
+                btn_lamps[BUTTON_COMMAND][status.current_floor] = 0;
+                break;
+            }
+
             elev_set_door_open_lamp(1);
             timer_start(3.0);
             status_updated = true;
@@ -145,10 +165,12 @@ void checkButton(elev_button_type_t button, int floor, void (*jobRequest)(int, i
         return;
     }
 
-    if (btn_inputs[floor][button] != elev_get_button_signal(button, floor)) {
-        btn_inputs[floor][button] = elev_get_button_signal(button, floor);
-        if (btn_inputs[floor][button] != 0) {
+    if (btn_inputs[button][floor] != elev_get_button_signal(button, floor)) {
+        btn_inputs[button][floor] = elev_get_button_signal(button, floor);
+        if (btn_inputs[button][floor] != 0) {
             jobRequest(button, floor);
+            elev_set_button_lamp(button, floor, 1);
+            btn_lamps[button][floor] = 1;
         }
     }
 }
@@ -159,8 +181,10 @@ void checkInputs(void (*jobRequest)(int, int))
     if (status.current_floor != elev_get_floor_sensor_signal() &&
             elev_get_floor_sensor_signal() != -1) {
         status.current_floor = elev_get_floor_sensor_signal();
+        elev_set_floor_indicator(status.current_floor);
     }
 
+    // Check every button for change in input
     for (size_t f = 0; f < N_FLOORS; f++) {
         for (size_t b = 0; b < N_BUTTONS; b++) {
             checkButton(b, f, jobRequest);

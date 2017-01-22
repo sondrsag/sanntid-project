@@ -25,11 +25,12 @@ struct driver_args {
 };
 
 // Initializes environment variables and runs the while(1) loop.
-// updateStatus(..) points to a function in the control module.
+// Args points to a struct of function pointers passed from the
+// control module.
 void* startDriver(void* args);
 
 // drv = driver
 // returns false if failed to start job
-bool drvStartJob(int floor);
+bool drvStartJob(elev_button_type_t btn, int floor);
 
 #endif /* end of include guard: _DRIVER_H_ */
