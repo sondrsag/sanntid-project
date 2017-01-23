@@ -23,16 +23,16 @@ Vi m� beskrive og begrunne:
 			Kontrollmodulen påvirkes ikke av om heisen er online eller offline.
 
 		Kommunikasjon:
+			Kommuniserer med andre heiser og beregner hvilke heiser som burde få hvilke jobber.
+			Kommunikasjonsmodulen kan ha to forskjellige roller i heisnettverket:
 
-			Nettverk:
-				Kommuniserer med andre heiser og beregner hvilke heiser som burde få hvilke jobber.
-				Kommunikasjonsmodulen kan ha to forskjellige roller i heisnettverket:
+			Master:
+				Mottar fordelingsforslag fra de andre heisene og har overordnet ansvar for å bestemme hvilke
+				heiser som får hvilke jobber.
 
-				Master:
-					Mottar fordelingsforslag fra de andre heisene og har overordnet ansvar for å bestemme hvilke
-					heiser som får hvilke jobber.
+			Slave:
 
-				Slave:
+		Nettverk:
 
 	Andre designissues
 
