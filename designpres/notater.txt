@@ -1,5 +1,5 @@
 Systemet skal v�re robust:
-	Det m� returnere til en trygg tilstand dersom det skjer noe feil.
+	Det m� returnere til en trygg tilstand dersom det skjer noe
 	Ingen bestillinger kan tapes.
 		Alle heisene skal ha all informasjon, slik at dersom en heis d�r vil ikke de andre heisene tape informasjon
 	M� kunne takle uforutsette hendelser.
@@ -43,3 +43,17 @@ How will you split into modules? Functions, objects, threads? Think about what m
 The networking part is often difficult. Can you find anything useful in the standard libraries, or other libraries?
 The elevator driver is written in C. How do you interface with C code?
 You may want to work from home, where you won't have an elevator. Does the language have a framework for making and running tests, or can you create one? Testing multithreaded code is especially difficult.
+
+What if:
+	- En heis mister nettverkstilkoblingen med jobber i bufferen:
+		Utfører heisen alle jobbene, i tilfelle alle de andre heisene har mistet strømmen.
+
+	- En heis mister strømmen/nettverkstilkoblingen:
+		De andre heisene konkluderer med at ingen av de tildelte jobbene blir utført, og fordeler dem seg i mellom.
+
+	- Heiser er uenige om jobbanalyse:
+		Masteren velger majoritetsavgjørelsen, dersom det ikke er en klar majoritet må heisen gjøre ny analyse.
+		Dersom det ikke er noen majoritetsavgjørelse etter andre beregning er masterens avgjørelse gjeldende.
+
+	- Bugs i koden:
+		Hyppig (dog nødvendig) bruk av assert() for input/output validering

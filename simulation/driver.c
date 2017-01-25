@@ -21,7 +21,15 @@ void checkInputs(void);
 
 bool drv_startJob(elev_button_type_t button, int floor);
 
-void* startDriver(void* args)
+void* startDriver();
+
+void drv_start(UpdateStatusCallback_t stat_callback, JobRequestCallback_t job_callback)
+{
+    updateStatus = stat_callback;
+    jobRequest = job_callback;
+}
+
+void* startDriver()
 {
     pthread_mutex_lock(&status_mtx);
 

@@ -18,4 +18,9 @@ typedef struct {
     int direction;
 } ElevatorStatus;
 
+typedef struct {
+    int floor;
+    elev_button_type_t button;
+} job_t;
+
 #endif /* end of include guard: _GLOBALS_H_ */

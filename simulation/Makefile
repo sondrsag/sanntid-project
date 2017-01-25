@@ -2,7 +2,7 @@
 CC = gcc
 
 # Compiler flags go here.
-CFLAGS = -std=gnu11 -g -O -Wall -Wextra
+CFLAGS = -std=gnu11 -g -O2 -Wall -Wextra -pedantic
 
 # Linker flags go here.
 LDFLAGS = -lcomedi -lm -lpthread
