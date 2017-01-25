@@ -3,19 +3,19 @@
 
 #include <stdbool.h>
 
-typedef enum tag_elev_motor_direction {
+typedef enum {
     DIRN_DOWN = -1,
     DIRN_STOP = 0,
     DIRN_UP = 1
 } elev_motor_direction_t;
 
-typedef enum tag_elev_lamp_type {
+typedef enum {
     BUTTON_CALL_UP = 0,
     BUTTON_CALL_DOWN = 1,
     BUTTON_COMMAND = 2
 } elev_button_type_t;
 
-typedef enum elevator_actions {
+typedef enum {
     IDLE = 0,
     MOVING = 1,
     OPEN = 2

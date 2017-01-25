@@ -63,11 +63,9 @@ void* runDriver()
 
     // Avoiding function calls during locked mtx with these variables
     bool working;
-    int dir;
     while (1) {
         pthread_mutex_lock(&status_mtx);
         working = status.working;
-        dir = status.direction;
         pthread_mutex_unlock(&status_mtx);
 
         if (working) { evalJobProgress(); }
@@ -76,10 +74,7 @@ void* runDriver()
 
         if (elev_get_stop_signal()) {
             elev_set_motor_direction(DIRN_STOP);
-            stopped = true;
-        } else if (stopped && !elev_get_stop_signal()) {
-            elev_set_motor_direction(dir);
-            stopped = false;
+            exit(0);
         }
 
         usleep(20);
@@ -134,7 +129,7 @@ bool drv_startJob(job_t job)
     updateStatus(status);
 
     if (ret) {
-        printf("Startet job. Btn: %d Floor: %d\n", job.button, job.floor);
+        printf("Startet job\tBtn %d Floor %d\n", job.button, job.floor);
     }
 
     return ret;
@@ -167,6 +162,8 @@ void evalJobProgress(void)
                 break;
             }
 
+            // elev_set_button_lamp(BUTTON_COMMAND, status.current_floor, 0);
+            // input.lamps[BUTTON_COMMAND][status.current_floor] = 0;
             elev_set_door_open_lamp(1);
             timer_start(3.0);
             updateStatus(status);
