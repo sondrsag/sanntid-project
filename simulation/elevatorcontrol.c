@@ -1,29 +1,38 @@
-#include "control.h"
+#include "elevatorcontrol.h"
+#include <assert.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <pthread.h>
 #include <string.h>
 #include <unistd.h>
 
+#define MAX_JOBS 20
+static job_t jobs[MAX_JOBS];
+static unsigned int num_jobs; // Number of pending jobs
 static ElevatorStatus status;
-static pthread_mutex_t ctr_mtx;
-void (*passOnStatus)(ElevatorStatus);
+static pthread_mutex_t ectr_mtx;
 
-#define MAX_REQUESTS 20
-// col 0 - floor of the request
-// col 1 - button pressed when requested
-static int requests[MAX_REQUESTS][2];
-static unsigned int num_req; // Number of pending requests
-void (*passOnRequest)(int, int);
+void (*updateStatus)(ElevatorStatus); // control module callback
+void (*sendJob)(job_t); // control module callback
 
-void* startControl(void* args)
+void* runElevatorcontrol();
+void ectr_updateStatus(ElevatorStatus);
+void ectr_receiveJob(job_t);
+
+void ectr_start(UpdateStatusCallback_t stat_callback, SendJobCallback_t job_callback)
 {
-    struct control_args* arguments = args;
-    passOnStatus = arguments->passOnStatusPtr;
-    passOnRequest = arguments->passOnRequestPtr;
+    drv_start(&ectr_updateStatus, &ectr_receiveJob);
+    sendJob = job_callback;
+    updateStatus = stat_callback;
+    pthread_t elevatorcontrol_thrd;
+    pthread_create(&elevatorcontrol_thrd, NULL, runElevatorcontrol, NULL);
+}
 
-    num_req = 0;
-    memset(requests, 0, MAX_REQUESTS * 2 * sizeof(int));
+void* runElevatorcontrol()
+{
+    pthread_mutex_lock(&ectr_mtx);
+    num_jobs = 0;
+    memset(jobs, 0, MAX_JOBS * sizeof(job_t));
 
     status.working = false;
     status.finished = false;
@@ -32,128 +41,120 @@ void* startControl(void* args)
     status.next_floor = -1;
     status.direction = 0;
 
-    usleep(1000);
+    pthread_mutex_unlock(&ectr_mtx);
 
     bool working;
     bool finished;
     int next_floor;
     int num;
-    int top_req[2];
+    job_t top_job;
     while (1) {
-        pthread_mutex_lock(&ctr_mtx);
+        pthread_mutex_lock(&ectr_mtx);
         working = status.working;
         finished = status.finished;
         next_floor = status.next_floor;
-        num = num_req;
-        if (num_req > 0) {
-            top_req[0] = requests[num_req - 1][0];
-            top_req[1] = requests[num_req - 1][1];
+        num = num_jobs;
+
+        if (num_jobs > 0) {
+            top_job = jobs[num_jobs - 1];
         }
-        pthread_mutex_unlock(&ctr_mtx);
+
+        pthread_mutex_unlock(&ectr_mtx);
 
         if (!working) {
             if (finished) {
-                pthread_mutex_lock(&ctr_mtx);
-                num_req--;
-                num = num_req;
+                pthread_mutex_lock(&ectr_mtx);
+                assert(("Finished a job without any registered jobs",
+                        num_jobs > 0));
+                num_jobs--;
+                num = num_jobs;
                 status.finished = false;
-                pthread_mutex_unlock(&ctr_mtx);
+                pthread_mutex_unlock(&ectr_mtx);
             }
 
             if (num > 0) {
-                drv_startJob(top_req[1], top_req[0]);
+                drv_startJob(top_job);
             }
-        } else if (working && top_req[0] != next_floor) {
-            drv_startJob(top_req[1], top_req[0]);
+        } else if (working && top_job.floor != next_floor) {
+            drv_startJob(top_job);
         }
 
-
-        // if (status.current_floor == 2 && status.action == IDLE) {
-        //     drv_startJob(BUTTON_CALL_UP, 0);
-        // }
-        // if (!status.working && status.current_floor != 2) {
-        //     drv_startJob(BUTTON_CALL_DOWN, 2);
-        // }
         usleep(500);
     } // while
 
     printf("Control shut down\n");
     pthread_exit(NULL);
-    return NULL; // To avoid compiler warnings
-} // startControl
+    return NULL;
+} // runElevatorcontrol
 
-void ctr_updateStatus(ElevatorStatus new_status)
+void ectr_updateStatus(ElevatorStatus new_status)
 {
-    pthread_mutex_lock(&ctr_mtx);
+    pthread_mutex_lock(&ectr_mtx);
     status = new_status;
     //printf("Updated status:\nworking %d\nnext %d\n", status.working, status.next_floor);
-    pthread_mutex_unlock(&ctr_mtx);
-    passOnStatus(new_status);
-} // ctr_updateStatus
+    pthread_mutex_unlock(&ectr_mtx);
+    updateStatus(new_status);
+} // ectr_updateStatus
 
-int findPosition(int button, int floor)
+int findPosition(job_t job)
 {
-    // reg_mtx must be locked when this function is called
-    if (num_req == 0) {
-        return 0;
-    }
+    if (num_jobs == 0) { return 0; }
 
     return 0;
 } // findPosition
 
-void insertReq(int button, int floor, int pos)
+void insertJob(job_t job, int pos)
 {
-    pthread_mutex_lock(&ctr_mtx);
-    num_req = 0;
-    if (num_req == MAX_REQUESTS || pos < 0 || pos >= MAX_REQUESTS) {
+    assert(("Inserting job at invalid position",
+            pos >= 0 && pos < MAX_JOBS));
+    pthread_mutex_lock(&ectr_mtx);
+    num_jobs = 0;
+    if (num_jobs == MAX_JOBS) {
         return;
     }
 
-    for (int i = num_req; i > pos; i--) {
-        requests[i][0] = requests[i - 1][0];
-        requests[i][1] = requests[i - 1][1];
+    for (int i = num_jobs; i > pos; i--) {
+        assert(("Insert iterator out of bounds", i >= 0));
+        jobs[i] = jobs[i - 1];
+        jobs[i] = jobs[i - 1];
     }
 
-    requests[pos][0] = floor;
-    requests[pos][1] = button;
-    num_req++;
-    pthread_mutex_unlock(&ctr_mtx);
-} // insertReq
+    jobs[pos] = job;
+    num_jobs++;
+    pthread_mutex_unlock(&ectr_mtx);
+} // insertJob
 
-// Check for duplicates and out-of-bound values
-bool validRequest(int button, int floor)
+bool validJob(job_t job)
 {
-    if (floor < 0 || floor >= N_FLOORS) {
-        return false;
-    }
+    assert(("Job validation: floor out of bounds",
+            job.floor >= 0 && job.floor < N_FLOORS));
 
-    pthread_mutex_lock(&ctr_mtx);
+    pthread_mutex_lock(&ectr_mtx);
 
-    for (size_t i = 0; i < num_req; i++) {
-        if (requests[i][0] == floor && requests[i][1] == button) {
-            return false;
+    bool ret = true;
+    for (size_t i = 0; i < num_jobs; i++) {
+        if (jobs[i].floor == job.floor && jobs[i].button == job.button) {
+            ret = false;
         }
     }
 
-    pthread_mutex_unlock(&ctr_mtx);
-    return true;
-} // validRequest
+    pthread_mutex_unlock(&ectr_mtx);
+    return ret;
+} // validJob
 
-void ctr_handleRequest(int button, int floor)
+void ectr_handleJob(job_t job)
 {
-    printf("Requested floor: %d btn: %d\n", floor, button);
-
-    if (validRequest(button, floor)) {
-        int pos = findPosition(button, floor);
-        insertReq(button, floor, pos);
+    if (validJob(job)) {
+        int pos = findPosition(job);
+        insertJob(job, pos);
     }
-} // ctr_handleRequest
+} // ectr_handleJob
 
-void ctr_receiveRequest(int button, int floor)
+void ectr_receiveJob(job_t job)
 {
-    if (button == BUTTON_COMMAND) {
-        ctr_handleRequest(button, floor);
+    if (job.button == BUTTON_COMMAND) {
+        ectr_handleJob(job);
     } else {
-        passOnRequest(button, floor);
+        sendJob(job);
     }
 }

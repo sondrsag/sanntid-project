@@ -3,6 +3,18 @@
 
 #include <stdbool.h>
 
+typedef enum tag_elev_motor_direction {
+    DIRN_DOWN = -1,
+    DIRN_STOP = 0,
+    DIRN_UP = 1
+} elev_motor_direction_t;
+
+typedef enum tag_elev_lamp_type {
+    BUTTON_CALL_UP = 0,
+    BUTTON_CALL_DOWN = 1,
+    BUTTON_COMMAND = 2
+} elev_button_type_t;
+
 typedef enum elevator_actions {
     IDLE = 0,
     MOVING = 1,
@@ -11,11 +23,11 @@ typedef enum elevator_actions {
 
 typedef struct {
     bool working;
-    bool finished;  // Used to clear job when finished
+    bool finished;
     ElevatorActions action;
     int current_floor;
     int next_floor;
-    int direction;
+    elev_motor_direction_t direction;
 } ElevatorStatus;
 
 typedef struct {

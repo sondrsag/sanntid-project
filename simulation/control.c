@@ -1,31 +1,37 @@
-#include "communication.h"
+#include "control.h"
+#include <assert.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 
 static ElevatorStatus elev_status;
-void (*handleRequest)(int, int);
+void (*handleJob)(job_t); // elevatorcontrol module callback
 
-void* startCommunication(void* args)
+void* runControl();
+
+void ctr_start(HandleJobCallback_t jobCallback)
 {
-    struct communication_args* arguments = args;
-    handleRequest = arguments->ctr_handleRequestPtr;
-
-    usleep(100); // All module threads sleeps 100us after initializing
-    return args; // To avoid compiler warnings
+    handleJob = jobCallback;
+    pthread_t communication_thrd;
+    pthread_create(&communication_thrd, NULL, runControl, NULL);
 }
 
-void cmc_updateElevStatus(ElevatorStatus new_status)
+void* runControl()
+{
+    return NULL;
+}
+
+void ctr_updateElevStatus(ElevatorStatus new_status)
 {
     elev_status = new_status;
 }
 
-void cmc_updateNetStatus()
+void ctr_updateNetStatus()
 {
 }
 
-void cmc_receiveRequest(int button, int floor)
+void ctr_receiveJob(job_t job)
 {
-    printf("communication returns request!\n");
-    handleRequest(button, floor);
+    handleJob(job);
 }

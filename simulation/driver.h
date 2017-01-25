@@ -6,20 +6,13 @@
 #include "elev.h"
 #include "globals.h"
 
-struct driver_args {
-    void (*updateStatusPtr)(ElevatorStatus);
-    void (*jobRequestPtr)(int, int);
-};
-
 typedef void (*UpdateStatusCallback_t)(ElevatorStatus);
-typedef void (*JobRequestCallback_t)(int, int);
-
-// Initializes environment variables and runs the while(1) loop.
-// Args points to a struct of function pointers passed from the
-// control module.
-void drv_start(UpdateStatusCallback_t stat_callback, JobRequestCallback_t job_callback);
+typedef void (*SendJobCallback_t)(job_t);
 
 // drv = driver
+void drv_start(UpdateStatusCallback_t stat_callback,
+               SendJobCallback_t      job_callback);
+
 // returns false if failed to start job
 bool drv_startJob(job_t job);
 
