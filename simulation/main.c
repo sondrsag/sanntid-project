@@ -2,54 +2,35 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include "driver.h"
-
-ElevatorStatus status;
-
-void updateStatus(ElevatorStatus new_status)
-{
-    printf("Updated status!\n");
-    status = new_status;
-}
-
-void handleRequest(int button, int floor)
-{
-    printf("Requested floor: %d btn: %d\n", floor, button);
-}
+#include <unistd.h>
+#include "control.h"
+#include "communication.h"
 
 int main() {
-    struct driver_args dargs;
-    dargs.updateStatusPtr = &updateStatus;
-    dargs.jobRequestPtr = &handleRequest;
+    struct driver_args drv_args;
+    drv_args.updateStatusPtr = &ctr_updateStatus;
+    drv_args.jobRequestPtr = &ctr_receiveRequest;
+
+    struct control_args ctr_args;
+    ctr_args.passOnStatusPtr = &cmc_updateElevStatus;
+    ctr_args.passOnRequestPtr = &cmc_receiveRequest;
+
+    struct communication_args cmc_args;
+    cmc_args.ctr_handleRequestPtr = &ctr_handleRequest;
 
     pthread_t driver_thrd;
-    pthread_create(&driver_thrd, NULL, startDriver, (void*)&dargs);
-    while (1) {
-        if (status.current_floor == 1 && status.action == IDLE) {
-            break;
-        }
-        if (!status.working && status.current_floor != 3) {
-            drvStartJob(BUTTON_CALL_DOWN, 3);
-        }
-        if (status.current_floor == 3 && status.action == IDLE) {
-            drvStartJob(BUTTON_CALL_UP, 1);
-        }
-    }
+    pthread_t control_thrd;
+    pthread_t communication_thrd;
+    pthread_create(&driver_thrd, NULL, startDriver, (void*)&drv_args);
+    usleep(1000);
+    pthread_create(&control_thrd, NULL, startControl, (void*)&ctr_args);
+    usleep(1000);
+    pthread_create(&communication_thrd, NULL, startCommunication, (void*)&cmc_args);
+
+
+    pthread_join(communication_thrd, NULL);
+    pthread_join(control_thrd, NULL);
     pthread_join(driver_thrd, NULL);
+
     return 0;
 }
-
-/*
-// Change direction when we reach top/bottom floor
-if (elev_get_floor_sensor_signal() == N_FLOORS - 1) {
-    elev_set_motor_direction(DIRN_DOWN);
-} else if (elev_get_floor_sensor_signal() == 0) {
-    elev_set_motor_direction(DIRN_UP);
-}
-
-// Stop elevator and exit program if the stop button is pressed
-if (elev_get_stop_signal()) {
-    elev_set_motor_direction(DIRN_STOP);
-    return 0;
-}
-*/

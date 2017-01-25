@@ -2,13 +2,13 @@
 CC = gcc
 
 # Compiler flags go here.
-CFLAGS = -std=gnu11 -g -Wall -Wextra
+CFLAGS = -std=gnu11 -g -O -Wall -Wextra
 
 # Linker flags go here.
 LDFLAGS = -lcomedi -lm -lpthread
 
 # list of sources
-ELEVSRC = lib/timer.c lib/stack.c elev.c io.c driver.c control.c main.c
+ELEVSRC = lib/timer.c lib/stack.c elev.c io.c driver.c control.c communication.c main.c
 
 # program executable file name.
 TARGET = elevator
