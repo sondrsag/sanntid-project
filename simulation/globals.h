@@ -22,11 +22,12 @@ typedef enum {
 } ElevatorActions;
 
 typedef struct {
-    bool                   working;
-    bool                   finished;
+    bool working;
+    bool finished;
+    int  current_floor;
+    int  next_floor;
+
     ElevatorActions        action;
-    int                    current_floor;
-    int                    next_floor;
     elev_motor_direction_t direction;
 } ElevatorStatus;
 

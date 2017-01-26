@@ -55,33 +55,23 @@ void* runElevatorcontrol()
         finished   = status.finished;
         next_floor = status.next_floor;
         num        = num_jobs;
-
-        if (num_jobs > 0) {
-            top_job = jobs[num_jobs - 1];
-        }
-
+        top_job    = (num_jobs > 0) ? jobs[num_jobs - 1] : top_job;
         pthread_mutex_unlock(&ectr_mtx);
-        int* a;
-        *a = 1;
+
         if (!working) {
             if (finished) {
                 pthread_mutex_lock(&ectr_mtx);
                 assert(("Finished a job without any registered jobs",
                         num_jobs > 0));
                 num_jobs--;
-                num = num_jobs;
-
-                if (num_jobs > 0) {
-                    top_job = jobs[num_jobs - 1];
-                }
+                num     = num_jobs;
+                top_job = (num_jobs > 0) ? jobs[num_jobs - 1] : top_job;
 
                 status.finished = false;
                 pthread_mutex_unlock(&ectr_mtx);
             }
 
-            if (num > 0) {
-                drv_startJob(top_job);
-            }
+            if (num > 0) drv_startJob(top_job);
         } else if (working && top_job.floor != next_floor) {
             drv_startJob(top_job);
         }
@@ -98,7 +88,6 @@ void ectr_updateStatus(ElevatorStatus new_status)
 {
     pthread_mutex_lock(&ectr_mtx);
     status = new_status;
-    //printf("Updated status:\nworking %d\nnext %d\n", status.working, status.next_floor);
     pthread_mutex_unlock(&ectr_mtx);
     updateStatus(new_status);
 } // ectr_updateStatus
@@ -111,13 +100,9 @@ bool putFirst(job_t job)
         ret = true;
     } else if (status.direction == DIRN_UP && status.next_floor > job.floor &&
                status.current_floor < job.floor && job.button == BUTTON_CALL_UP) {
-        // printf("Put first, in between upwards\nCurrent\t\t%d\nNew\t\t%d\nNext\t\t%dn\n",
-        //        status.current_floor, job.floor, status.next_floor);
         ret = true;
     } else if (status.direction == DIRN_DOWN && status.next_floor < job.floor &&
                status.current_floor > job.floor && job.button == BUTTON_CALL_DOWN) {
-        // printf("Put first, in between downwards\nCurrent\t\t%d\nNew\t\t%d\nNext\t\t%dn\n",
-        //        status.current_floor, job.floor, status.next_floor);
         ret = true;
     }
     pthread_mutex_unlock(&ectr_mtx);
@@ -207,9 +192,7 @@ void insertJob(job_t job, size_t pos)
     assert(("Inserting job at invalid position",
             pos < MAX_JOBS));
     pthread_mutex_lock(&ectr_mtx);
-    if (num_jobs == MAX_JOBS) {
-        return;
-    }
+    if (num_jobs == MAX_JOBS) return;
 
     for (size_t i = num_jobs; i > pos; i--) {
         jobs[i] = jobs[i - 1];
@@ -227,13 +210,14 @@ bool validJob(job_t job)
 {
     assert(("Job validation: floor out of bounds",
             job.floor >= 0 && job.floor < N_FLOORS));
-
     pthread_mutex_lock(&ectr_mtx);
-
-    // NOTE, add:
-    // When validating an internal request return false if theres already an
-    // external request for the same floor.
     bool ret = true;
+
+    if (num_jobs == 0) {
+        pthread_mutex_unlock(&ectr_mtx);
+        return ret;
+    }
+
     for (size_t i = num_jobs - 1; i > 0; i--) {
         if (jobs[i].button == BUTTON_COMMAND && job.button == BUTTON_CALL_UP &&
             jobs[i].floor == job.floor && jobs[i - 1].floor > job.floor) {
@@ -245,8 +229,8 @@ bool validJob(job_t job)
             ret     = false;
         } else if (i == 1 && jobs[i - 1].button == BUTTON_COMMAND &&
                    job.button != BUTTON_COMMAND && jobs[i - 1].floor == job.floor) {
-            jobs[i - 1]                         = job
-                                            ret = false;
+            jobs[i - 1] = job;
+            ret         = false;
         } else if (jobs[i].floor == job.floor && jobs[i].button == job.button) {
             ret = false;
         }

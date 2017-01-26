@@ -105,26 +105,29 @@ bool drv_startJob(job_t job)
         status.action     = MOVING;
         status.next_floor = job.floor;
         status.direction  = DIRN_UP;
-        job_btn           = job.button;
-        ret               = true;
+
+        job_btn = job.button;
+        ret     = true;
     } else if (job.floor < status.current_floor) {
         elev_set_motor_direction(DIRN_DOWN);
         status.working    = true;
         status.action     = MOVING;
         status.next_floor = job.floor;
         status.direction  = DIRN_DOWN;
-        job_btn           = job.button;
-        ret               = true;
+
+        job_btn = job.button;
+        ret     = true;
     } else if (job.floor == status.current_floor) {
-        status.working    = true;
-        status.action     = OPEN;
-        status.next_floor = job.floor;
         elev_set_button_lamp(job.button, job.floor, 0);
         input.lamps[job.button][job.floor] = 0;
         elev_set_door_open_lamp(1);
         timer_start(3.0);
-        ret = true;
-    }     // if
+
+        status.working    = true;
+        status.action     = OPEN;
+        status.next_floor = job.floor;
+        ret               = true;
+    } // if
 
     pthread_mutex_unlock(&status_mtx);
     updateStatus(status);
@@ -158,13 +161,13 @@ void evalJobProgress(void)
                 break;
 
             case BUTTON_COMMAND:
-                elev_set_button_lamp(BUTTON_COMMAND, status.current_floor, 0);
-                input.lamps[BUTTON_COMMAND][status.current_floor] = 0;
+                // elev_set_button_lamp(BUTTON_COMMAND, status.current_floor, 0);
+                // input.lamps[BUTTON_COMMAND][status.current_floor] = 0;
                 break;
             }
 
-            // elev_set_button_lamp(BUTTON_COMMAND, status.current_floor, 0);
-            // input.lamps[BUTTON_COMMAND][status.current_floor] = 0;
+            elev_set_button_lamp(BUTTON_COMMAND, status.current_floor, 0);
+            input.lamps[BUTTON_COMMAND][status.current_floor] = 0;
             elev_set_door_open_lamp(1);
             timer_start(3.0);
             updateStatus(status);
