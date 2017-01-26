@@ -4,33 +4,16 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "elev.h"
+#include "globals.h"
 
-typedef enum elevator_actions {
-    IDLE = 0,
-    MOVING = 1,
-    OPEN = 2
-} ElevatorActions;
-
-typedef struct {
-    bool working;
-    ElevatorActions action;
-    int current_floor;
-    int next_floor;
-    int direction;
-} ElevatorStatus;
-
-struct driver_args {
-    void (*updateStatusPtr)(ElevatorStatus);
-    void (*jobRequestPtr)(int, int);
-};
-
-// Initializes environment variables and runs the while(1) loop.
-// Args points to a struct of function pointers passed from the
-// control module.
-void* startDriver(void* args);
+typedef void (*UpdateStatusCallback_t)(ElevatorStatus);
+typedef void (*SendJobCallback_t)(job_t);
 
 // drv = driver
+void drv_start(UpdateStatusCallback_t stat_callback,
+               SendJobCallback_t      job_callback);
+
 // returns false if failed to start job
-bool drvStartJob(elev_button_type_t btn, int floor);
+bool drv_startJob(job_t job);
 
 #endif /* end of include guard: _DRIVER_H_ */
