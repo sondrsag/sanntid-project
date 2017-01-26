@@ -7,23 +7,23 @@
 #include <unistd.h>
 
 #define MAX_JOBS 20
-static job_t jobs[MAX_JOBS];
-static unsigned int num_jobs;       // Number of pending jobs
-static ElevatorStatus status;
+static job_t           jobs[MAX_JOBS];
+static unsigned int    num_jobs;    // Number of pending jobs
+static ElevatorStatus  status;
 static pthread_mutex_t ectr_mtx;
 
 void (*updateStatus)(ElevatorStatus);   // control module callback
 void (*sendJob)(job_t);                 // control module callback
 
 void* runElevatorcontrol();
-void ectr_updateStatus(ElevatorStatus);
-void ectr_receiveJob(job_t);
+void  ectr_updateStatus(ElevatorStatus);
+void  ectr_receiveJob(job_t);
 
 void ectr_start(UpdateStatusCallback_t stat_callback,
                 SendJobCallback_t      job_callback)
 {
     drv_start(&ectr_updateStatus, &ectr_receiveJob);
-    sendJob = job_callback;
+    sendJob      = job_callback;
     updateStatus = stat_callback;
     pthread_t elevatorcontrol_thrd;
     pthread_create(&elevatorcontrol_thrd, NULL, runElevatorcontrol, NULL);
@@ -35,33 +35,34 @@ void* runElevatorcontrol()
     num_jobs = 0;
     memset(jobs, 0, MAX_JOBS * sizeof(job_t));
 
-    status.working = false;
-    status.finished = false;
-    status.action = IDLE;
+    status.working       = false;
+    status.finished      = false;
+    status.action        = IDLE;
     status.current_floor = -1;
-    status.next_floor = -1;
-    status.direction = 0;
+    status.next_floor    = -1;
+    status.direction     = 0;
 
     pthread_mutex_unlock(&ectr_mtx);
 
-    bool working;
-    bool finished;
-    int next_floor;
-    int num;
+    bool  working;
+    bool  finished;
+    int   next_floor;
+    int   num;
     job_t top_job;
     while (1) {
         pthread_mutex_lock(&ectr_mtx);
-        working = status.working;
-        finished = status.finished;
+        working    = status.working;
+        finished   = status.finished;
         next_floor = status.next_floor;
-        num = num_jobs;
+        num        = num_jobs;
 
         if (num_jobs > 0) {
             top_job = jobs[num_jobs - 1];
         }
 
         pthread_mutex_unlock(&ectr_mtx);
-
+        int* a;
+        *a = 1;
         if (!working) {
             if (finished) {
                 pthread_mutex_lock(&ectr_mtx);
@@ -86,7 +87,7 @@ void* runElevatorcontrol()
         }
 
         usleep(1000);
-    } // while
+    }     // while
 
     printf("Control shut down\n");
     pthread_exit(NULL);
@@ -110,53 +111,80 @@ bool putFirst(job_t job)
         ret = true;
     } else if (status.direction == DIRN_UP && status.next_floor > job.floor &&
                status.current_floor < job.floor && job.button == BUTTON_CALL_UP) {
+        // printf("Put first, in between upwards\nCurrent\t\t%d\nNew\t\t%d\nNext\t\t%dn\n",
+        //        status.current_floor, job.floor, status.next_floor);
         ret = true;
     } else if (status.direction == DIRN_DOWN && status.next_floor < job.floor &&
                status.current_floor > job.floor && job.button == BUTTON_CALL_DOWN) {
+        // printf("Put first, in between downwards\nCurrent\t\t%d\nNew\t\t%d\nNext\t\t%dn\n",
+        //        status.current_floor, job.floor, status.next_floor);
         ret = true;
     }
     pthread_mutex_unlock(&ectr_mtx);
     if (ret) puts("Put first!");
     return ret;
-}
+} /* putFirst */
 
 bool goodPos(job_t job, size_t pos)
 {
     pthread_mutex_lock(&ectr_mtx);
-    int floor_a = jobs[pos].floor;
+    int floor_a  = jobs[pos].floor;
     int button_a = jobs[pos].button;
-    int floor_b = jobs[pos - 1].floor;
+    int floor_b  = jobs[pos - 1].floor;
+    int button_b = jobs[pos - 1].button;
     pthread_mutex_unlock(&ectr_mtx);
     bool ret = false;
 
+    // printf("------------\n");
     if (button_a == BUTTON_CALL_UP && job.button == BUTTON_CALL_UP &&
         job.floor > floor_a && floor_b > job.floor) {
+        // puts("Ny jobb: mellom a og b, oppover");
         ret = true;
     } else if (button_a == BUTTON_CALL_UP && job.button == BUTTON_CALL_DOWN &&
-               job.floor > floor_a && floor_b < job.floor) {
+               job.floor > floor_a &&
+               ((floor_b < job.floor && button_b == BUTTON_CALL_DOWN) || floor_b < floor_a)) {
+        // puts("Ny jobb: over a, snur på topp");
         ret = true;
     } else if (button_a == BUTTON_CALL_UP && job.button == BUTTON_COMMAND &&
                job.floor > floor_a && (floor_b > job.floor || floor_b < floor_a)) {
+        // puts("Ny jobb: over a, snur/fortsetter på topp");
         ret = true;
     } else if (button_a == BUTTON_CALL_DOWN && job.button == BUTTON_CALL_DOWN &&
                job.floor < floor_a && floor_b < job.floor) {
+        // puts("Ny jobb: mellom a og b, nedover");
         ret = true;
     } else if (button_a == BUTTON_CALL_DOWN && job.button == BUTTON_CALL_UP &&
-               job.floor < floor_a && floor_b > job.floor) {
+               job.floor < floor_a &&
+               ((floor_b > job.floor && button_b == BUTTON_CALL_UP) || floor_b > floor_a)) {
+        // puts("Ny jobb: under a, snur nederst");
         ret = true;
     } else if (button_a == BUTTON_CALL_DOWN && job.button == BUTTON_COMMAND &&
                job.floor < floor_a && (floor_b < job.floor || floor_b > floor_a)) {
+        // puts("Ny jobb: under a, snur/fortsetter nederst");
         ret = true;
     } else if (button_a == BUTTON_COMMAND && job.button == BUTTON_COMMAND &&
                job.floor < floor_a && floor_b < job.floor) {
+        // puts("Ny jobb: mellom a og b, nedover (intern)");
         ret = true;
     } else if (button_a == BUTTON_COMMAND && job.button == BUTTON_COMMAND &&
                job.floor > floor_a && floor_b > job.floor) {
+        // puts("Ny jobb: mellom a og b, oppover (intern)");
+        ret = true;
+    } else if (button_a == BUTTON_COMMAND && job.button == BUTTON_CALL_UP &&
+               job.floor > floor_a && floor_b > job.floor) {
+        // puts("Ny jobb: mellom a og b, oppover (intern)");
+        ret = true;
+    } else if (button_a == BUTTON_COMMAND && job.button == BUTTON_CALL_DOWN &&
+               job.floor < floor_a && floor_b < job.floor) {
+        // puts("Ny jobb: mellom a og b, nedover (intern)");
         ret = true;
     }
 
+    // printf("floor a\t\t%d\nbutton a\t%d\nfloor b\t\t%d\njob btn\t\t%d\njob floor\t%d\nposition\t%d\nreturn\t\t%d\n",
+    //        floor_a, button_a, floor_b, job.button, job.floor, pos, ret);
+
     return ret;
-}
+} /* goodPos */
 
 size_t findPosition(job_t job)
 {
@@ -164,9 +192,9 @@ size_t findPosition(job_t job)
     size_t pos = num_jobs;
     pthread_mutex_unlock(&ectr_mtx);
 
-    if(!putFirst(job)) {
-        pos--;
-        for (pos; pos > 0; pos--) {
+    if (!putFirst(job)) {
+        pos -= 1;
+        for (; pos > 0; pos--) {
             if (goodPos(job, pos)) break;
         }
     }
@@ -206,8 +234,20 @@ bool validJob(job_t job)
     // When validating an internal request return false if theres already an
     // external request for the same floor.
     bool ret = true;
-    for (size_t i = 0; i < num_jobs; i++) {
-        if (jobs[i].floor == job.floor && jobs[i].button == job.button) {
+    for (size_t i = num_jobs - 1; i > 0; i--) {
+        if (jobs[i].button == BUTTON_COMMAND && job.button == BUTTON_CALL_UP &&
+            jobs[i].floor == job.floor && jobs[i - 1].floor > job.floor) {
+            jobs[i] = job;
+            ret     = false;
+        } else if (jobs[i].button == BUTTON_COMMAND && job.button == BUTTON_CALL_DOWN &&
+                   jobs[i].floor == job.floor && jobs[i - 1].floor < job.floor) {
+            jobs[i] = job;
+            ret     = false;
+        } else if (i == 1 && jobs[i - 1].button == BUTTON_COMMAND &&
+                   job.button != BUTTON_COMMAND && jobs[i - 1].floor == job.floor) {
+            jobs[i - 1]                         = job
+                                            ret = false;
+        } else if (jobs[i].floor == job.floor && jobs[i].button == job.button) {
             ret = false;
         }
     }

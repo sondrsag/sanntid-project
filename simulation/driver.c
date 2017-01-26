@@ -11,24 +11,24 @@ static struct {
     int lamps[N_BUTTONS][N_FLOORS];
 } input;
 
-static int job_btn; // To keep track of which buttons light to switch of after current job
+static int  job_btn; // To keep track of which buttons light to switch of after current job
 static bool stopped;
 
-static ElevatorStatus status;
+static ElevatorStatus  status;
 static pthread_mutex_t status_mtx;
 
 static void (*updateStatus)(ElevatorStatus); // elevatorcontrol module callback
 static void (*sendJob)(job_t); // elevatorcontrol module callback
 
-void evalJobProgress(void);
-void checkInputs(void);
-bool drv_startJob(job_t job);
+void  evalJobProgress(void);
+void  checkInputs(void);
+bool  drv_startJob(job_t job);
 void* runDriver();
 
 void drv_start(UpdateStatusCallback_t stat_callback, SendJobCallback_t job_callback)
 {
     updateStatus = stat_callback;
-    sendJob = job_callback;
+    sendJob      = job_callback;
     pthread_t driver_thrd;
     pthread_create(&driver_thrd, NULL, runDriver, NULL);
 }
@@ -43,12 +43,12 @@ void* runDriver()
     memset(input.buttons, 0, N_BUTTONS * N_FLOORS * sizeof(int));
     memset(input.lamps, 0, N_BUTTONS * N_FLOORS * sizeof(int));
 
-    status.working = false;
-    status.finished = false;
-    status.action = IDLE;
+    status.working       = false;
+    status.finished      = false;
+    status.action        = IDLE;
     status.current_floor = elev_get_floor_sensor_signal();
-    status.next_floor = -1;
-    status.direction = 0;
+    status.next_floor    = -1;
+    status.direction     = 0;
 
     if (status.current_floor == -1) {
         elev_set_motor_direction(DIRN_DOWN);
@@ -68,7 +68,7 @@ void* runDriver()
         working = status.working;
         pthread_mutex_unlock(&status_mtx);
 
-        if (working) { evalJobProgress(); }
+        if (working) evalJobProgress();
 
         checkInputs();
 
@@ -78,7 +78,7 @@ void* runDriver()
         }
 
         usleep(20);
-    } // while
+    }     // while
 
     printf("Driver shut down!\n");
     pthread_exit(NULL);
@@ -101,29 +101,30 @@ bool drv_startJob(job_t job)
 
     if (job.floor > status.current_floor) {
         elev_set_motor_direction(DIRN_UP);
-        status.working = true;
-        status.action = MOVING;
+        status.working    = true;
+        status.action     = MOVING;
         status.next_floor = job.floor;
-        status.direction = DIRN_UP;
-        job_btn = job.button;
-        ret = true;
+        status.direction  = DIRN_UP;
+        job_btn           = job.button;
+        ret               = true;
     } else if (job.floor < status.current_floor) {
         elev_set_motor_direction(DIRN_DOWN);
-        status.working = true;
-        status.action = MOVING;
+        status.working    = true;
+        status.action     = MOVING;
         status.next_floor = job.floor;
-        status.direction = DIRN_DOWN;
-        job_btn = job.button;
-        ret = true;
+        status.direction  = DIRN_DOWN;
+        job_btn           = job.button;
+        ret               = true;
     } else if (job.floor == status.current_floor) {
-        status.working = true;
-        status.action = OPEN;
+        status.working    = true;
+        status.action     = OPEN;
+        status.next_floor = job.floor;
         elev_set_button_lamp(job.button, job.floor, 0);
         input.lamps[job.button][job.floor] = 0;
         elev_set_door_open_lamp(1);
         timer_start(3.0);
         ret = true;
-    } // if
+    }     // if
 
     pthread_mutex_unlock(&status_mtx);
     updateStatus(status);
@@ -142,7 +143,7 @@ void evalJobProgress(void)
     case MOVING:
         if (status.current_floor == status.next_floor) {
             elev_set_motor_direction(DIRN_STOP);
-            status.action = OPEN;
+            status.action    = OPEN;
             status.direction = DIRN_STOP;
 
             switch (job_btn) {
@@ -167,24 +168,25 @@ void evalJobProgress(void)
             elev_set_door_open_lamp(1);
             timer_start(3.0);
             updateStatus(status);
-        } // if
+        }         // if
 
         break;
 
     case OPEN:
         if (timer_timedOut()) {
             elev_set_door_open_lamp(0);
-            status.working = false;
+            status.working  = false;
             status.finished = true;
-            status.action = IDLE;
+            status.action   = IDLE;
             updateStatus(status);
+            status.finished = false;
         }
 
         break;
 
     case IDLE:
         break;
-    } // switch
+    }     // switch
 
     pthread_mutex_unlock(&status_mtx);
 } // evalJobProgress
@@ -200,8 +202,11 @@ void checkButton(elev_button_type_t button, int floor)
                     (button != BUTTON_CALL_UP || floor != N_FLOORS - 1)));
 
             job_t new_job;
-            new_job.floor = floor;
+            new_job.floor  = floor;
             new_job.button = button;
+            pthread_mutex_lock(&status_mtx);
+            updateStatus(status);
+            pthread_mutex_unlock(&status_mtx);
             sendJob(new_job);
             elev_set_button_lamp(button, floor, 1);
             input.lamps[button][floor] = 1;
@@ -213,7 +218,7 @@ void checkInputs(void)
 {
     pthread_mutex_lock(&status_mtx);
     if (status.current_floor != elev_get_floor_sensor_signal() &&
-            elev_get_floor_sensor_signal() != -1) {
+        elev_get_floor_sensor_signal() != -1) {
         status.current_floor = elev_get_floor_sensor_signal();
         elev_set_floor_indicator(status.current_floor);
     }

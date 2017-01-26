@@ -31,20 +31,20 @@ static const int button_channel_matrix[N_FLOORS][N_BUTTONS] = {
 
 
 
-static elev_type elevatorType = ET_Comedi;
-static int sockfd;
+static elev_type       elevatorType = ET_Comedi;
+static int             sockfd;
 static pthread_mutex_t sockmtx;
 
 void elev_init(elev_type e) {
     elevatorType = e;
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
         ;
         int init_success = io_init();
         assert(init_success && "Unable to initialize elevator hardware!");
 
-        for(int f = 0; f < N_FLOORS; f++) {
-            for(elev_button_type_t b = 0; b < N_BUTTONS; b++) {
+        for (int f = 0; f < N_FLOORS; f++) {
+            for (elev_button_type_t b = 0; b < N_BUTTONS; b++) {
                 elev_set_button_lamp(b, f, 0);
             }
         }
@@ -56,22 +56,22 @@ void elev_init(elev_type e) {
 
     case ET_Simulation:
         ;
-        char ip[16] = {0};
+        char ip[16]  = {0};
         char port[8] = {0};
         con_load("simulator.con",
-            con_val("com_ip",   ip,   "%s")
-            con_val("com_port", port, "%s")
-        )
+                 con_val("com_ip",   ip,   "%s")
+                 con_val("com_port", port, "%s")
+                 )
 
         pthread_mutex_init(&sockmtx, NULL);
 
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         assert(sockfd != -1 && "Unable to set up socket");
 
-        struct addrinfo hints = {
-            .ai_family      = AF_UNSPEC,
-            .ai_socktype    = SOCK_STREAM,
-            .ai_protocol    = IPPROTO_TCP,
+        struct addrinfo  hints = {
+            .ai_family   = AF_UNSPEC,
+            .ai_socktype = SOCK_STREAM,
+            .ai_protocol = IPPROTO_TCP,
         };
         struct addrinfo* res;
         getaddrinfo(ip, port, &hints, &res);
@@ -84,21 +84,21 @@ void elev_init(elev_type e) {
         send(sockfd, (char[4]) {0}, 4, 0);
 
         break;
-    }
-}
+    } /* switch */
+} /* elev_init */
 
 
 
 
 void elev_set_motor_direction(elev_motor_direction_t dirn) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
-        if(dirn == 0) {
+        if (dirn == 0) {
             io_write_analog(MOTOR, 0);
-        } else if(dirn > 0) {
+        } else if (dirn > 0) {
             io_clear_bit(MOTORDIR);
             io_write_analog(MOTOR, MOTOR_SPEED);
-        } else if(dirn < 0) {
+        } else if (dirn < 0) {
             io_set_bit(MOTORDIR);
             io_write_analog(MOTOR, MOTOR_SPEED);
         }
@@ -108,19 +108,19 @@ void elev_set_motor_direction(elev_motor_direction_t dirn) {
         send(sockfd, (char[4]) {1, dirn}, 4, 0);
         pthread_mutex_unlock(&sockmtx);
         break;
-    }
-}
+    } /* switch */
+} /* elev_set_motor_direction */
 
 
 void elev_set_button_lamp(elev_button_type_t button, int floor, int value) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
         assert(floor >= 0);
         assert(floor < N_FLOORS);
         assert(button >= 0);
         assert(button < N_BUTTONS);
 
-        if(value) {
+        if (value) {
             io_set_bit(lamp_channel_matrix[floor][button]);
         } else {
             io_clear_bit(lamp_channel_matrix[floor][button]);
@@ -131,24 +131,24 @@ void elev_set_button_lamp(elev_button_type_t button, int floor, int value) {
         send(sockfd, (char[4]) {2, button, floor, value}, 4, 0);
         pthread_mutex_unlock(&sockmtx);
         break;
-    }
-}
+    } /* switch */
+} /* elev_set_button_lamp */
 
 
 void elev_set_floor_indicator(int floor) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
         assert(floor >= 0);
         assert(floor < N_FLOORS);
 
         // Binary encoding. One light must always be on.
-        if(floor & 0x02) {
+        if (floor & 0x02) {
             io_set_bit(LIGHT_FLOOR_IND1);
         } else {
             io_clear_bit(LIGHT_FLOOR_IND1);
         }
 
-        if(floor & 0x01) {
+        if (floor & 0x01) {
             io_set_bit(LIGHT_FLOOR_IND2);
         } else {
             io_clear_bit(LIGHT_FLOOR_IND2);
@@ -159,14 +159,14 @@ void elev_set_floor_indicator(int floor) {
         send(sockfd, (char[4]) {3, floor}, 4, 0);
         pthread_mutex_unlock(&sockmtx);
         break;
-    }
-}
+    } /* switch */
+} /* elev_set_floor_indicator */
 
 
 void elev_set_door_open_lamp(int value) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
-        if(value) {
+        if (value) {
             io_set_bit(LIGHT_DOOR_OPEN);
         } else {
             io_clear_bit(LIGHT_DOOR_OPEN);
@@ -182,9 +182,9 @@ void elev_set_door_open_lamp(int value) {
 
 
 void elev_set_stop_lamp(int value) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
-        if(value) {
+        if (value) {
             io_set_bit(LIGHT_STOP);
         } else {
             io_clear_bit(LIGHT_STOP);
@@ -202,14 +202,14 @@ void elev_set_stop_lamp(int value) {
 
 
 int elev_get_button_signal(elev_button_type_t button, int floor) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
         assert(floor >= 0);
         assert(floor < N_FLOORS);
         assert(button >= 0);
         assert(button < N_BUTTONS);
 
-        return (io_read_bit(button_channel_matrix[floor][button]));
+        return io_read_bit(button_channel_matrix[floor][button]);
     case ET_Simulation:
         pthread_mutex_lock(&sockmtx);
         send(sockfd, (char[4]) {6, button, floor}, 4, 0);
@@ -219,19 +219,19 @@ int elev_get_button_signal(elev_button_type_t button, int floor) {
         return buf[1];
     }
     return 0;
-}
+} /* elev_get_button_signal */
 
 
 int elev_get_floor_sensor_signal(void) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
-        if(io_read_bit(SENSOR_FLOOR1)) {
+        if (io_read_bit(SENSOR_FLOOR1)) {
             return 0;
-        } else if(io_read_bit(SENSOR_FLOOR2)) {
+        } else if (io_read_bit(SENSOR_FLOOR2)) {
             return 1;
-        } else if(io_read_bit(SENSOR_FLOOR3)) {
+        } else if (io_read_bit(SENSOR_FLOOR3)) {
             return 2;
-        } else if(io_read_bit(SENSOR_FLOOR4)) {
+        } else if (io_read_bit(SENSOR_FLOOR4)) {
             return 3;
         } else {
             return -1;
@@ -243,13 +243,13 @@ int elev_get_floor_sensor_signal(void) {
         recv(sockfd, buf, 4, 0);
         pthread_mutex_unlock(&sockmtx);
         return buf[1] ? buf[2] : -1;
-    }
+    } /* switch */
     return 0;
-}
+} /* elev_get_floor_sensor_signal */
 
 
 int elev_get_stop_signal(void) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
         return io_read_bit(STOP);
     case ET_Simulation:
@@ -265,7 +265,7 @@ int elev_get_stop_signal(void) {
 
 
 int elev_get_obstruction_signal(void) {
-    switch(elevatorType) {
+    switch (elevatorType) {
     case ET_Comedi:
         return io_read_bit(OBSTRUCTION);
     case ET_Simulation:
