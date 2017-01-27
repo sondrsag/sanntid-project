@@ -1,35 +1,43 @@
-Systemet skal være robust:
-	Det må returnere til en trygg tilstand dersom det skjer noe feil.
+Systemet skal vï¿½re robust:
+	Det mï¿½ returnere til en trygg tilstand dersom det skjer noe
 	Ingen bestillinger kan tapes.
-		Alle heisene skal ha all informasjon, slik at dersom en heis dør vil ikke de andre heisene tape informasjon
-	Må kunne takle uforutsette hendelser.
+		Alle heisene skal ha all informasjon, slik at dersom en heis dï¿½r vil ikke de andre heisene tape informasjon
+	Mï¿½ kunne takle uforutsette hendelser.
 		Software redundancy:
-			Flere tråder kan gjøre samme utregning. Dersom det oppstår uenigheter vil det stemmes over hva som blir resultatet. Eller utregningen kan utføres på nytt.
+			Flere trï¿½der kan gjï¿½re samme utregning. Dersom det oppstï¿½r uenigheter vil det stemmes over hva som blir resultatet. Eller utregningen kan utfï¿½res pï¿½ nytt.
 		Hardware redundancy:
-			Alle heisene gjør sine egne utregninger og sender resultatene til master. Master avgjør så hva som er det rette svaret ved avstemming. Eller ber om at utregningene skal gjøres på nytt
+			Alle heisene gjï¿½r sine egne utregninger og sender resultatene til master. Master avgjï¿½r sï¿½ hva som er det rette svaret ved avstemming. Eller ber om at utregningene skal gjï¿½res pï¿½ nytt
 
-Vi må beskrive og begrunne:
+Vi mï¿½ beskrive og begrunne:
 	Nettverkstopologien
             Vi kunne representere data på en fornuftig måte og enkelt sende det over nettverk. Vi kan bruke https://github.com/json-c/json-c eller protobuf for å få til dette.
 	Modulansvar:
+		Driver:
+			Styre heisen, lys og dÃ¸r.
+			Blir fortalt hvilken jobb som skal gjÃ¸res og har ansvar for Ã¥ utfÃ¸re jobber.
+			Ansvar for Ã¥ registrere og videresende input, og holde track pÃ¥ heisens status til enhver tid.
+			Tar ingen avgjÃ¸relser. Jobber kun i "nu'et".
+
 		Kontroll:
-			
+			Organiserer heisens jobber. Holder styr pÃ¥ hvilke jobber heisen skal utfÃ¸re og nÃ¥r de skal utfÃ¸res.
+			HÃ¥ndterer jobbetterspÃ¸rsler fra kommunikasjonsmodulen og drivermodulen.
+			Kontrollmodulen pÃ¥virkes ikke av om heisen er online eller offline.
+
+		Kommunikasjon:
+			Kommuniserer med andre heiser og beregner hvilke heiser som burde fÃ¥ hvilke jobber.
+			Kommunikasjonsmodulen kan ha to forskjellige roller i heisnettverket:
+
 			Master:
-			
+				Mottar fordelingsforslag fra de andre heisene og har overordnet ansvar for Ã¥ bestemme hvilke
+				heiser som fÃ¥r hvilke jobber.
+
 			Slave:
-		
-		Heiskontroll:
-			
-			Heisdriver:
-			
-		Heiskommunikasjon:
-			
-			Nettverk:
-			
-	
+
+		Nettverk:
+
 	Andre designissues
-	
-Vi må forstå svakheter ved designet og hvordan disse kan takles
+
+Vi mï¿½ forstï¿½ svakheter ved designet og hvordan disse kan takles
 
 Think about how want to move data around (reading buttons, network, setting motor & lights, state machines, etc). Do you think in a shared-variable way or a message-passing way? Will you be using concurrency at all?
 How will you split into modules? Functions, objects, threads? Think about what modules you need, and how they need to interact. This is an iterative design process that will take you many tries to get "right" (if such a thing even exists!).
@@ -45,3 +53,16 @@ Feilhåndtering:
 	Restarting = Backward error recovery  
 	
 	Static redundancy: Hvis det er uenighet la majoriteten bestemme. Dersom det ikke er noen majoritet, gjør beregning på nytt. Dersom det fortsatt ikke er noen majoritet: enten la master bestemme, eller restart alt.
+What if:
+	- En heis mister nettverkstilkoblingen med jobber i bufferen:
+		UtfÃ¸rer heisen alle jobbene, i tilfelle alle de andre heisene har mistet strÃ¸mmen.
+
+	- En heis mister strÃ¸mmen/nettverkstilkoblingen:
+		De andre heisene konkluderer med at ingen av de tildelte jobbene blir utfÃ¸rt, og fordeler dem seg i mellom.
+
+	- Heiser er uenige om jobbanalyse:
+		Masteren velger majoritetsavgjÃ¸relsen, dersom det ikke er en klar majoritet mÃ¥ heisen gjÃ¸re ny analyse.
+		Dersom det ikke er noen majoritetsavgjÃ¸relse etter andre beregning er masterens avgjÃ¸relse gjeldende.
+
+	- Bugs i koden:
+		Hyppig (dog nÃ¸dvendig) bruk av assert() for input/output validering
