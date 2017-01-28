@@ -10,6 +10,7 @@ Systemet skal vï¿½re robust:
 
 Vi mï¿½ beskrive og begrunne:
 	Nettverkstopologien
+            Vi kunne representere data på en fornuftig måte og enkelt sende det over nettverk. Vi kan bruke https://github.com/json-c/json-c eller protobuf for å få til dette.
 	Modulansvar:
 		Driver:
 			Styre heisen, lys og dÃ¸r.
@@ -44,6 +45,14 @@ The networking part is often difficult. Can you find anything useful in the stan
 The elevator driver is written in C. How do you interface with C code?
 You may want to work from home, where you won't have an elevator. Does the language have a framework for making and running tests, or can you create one? Testing multithreaded code is especially difficult.
 
+Feilhåndtering:
+	Error mode merging: Vi behandler alle feil som den samme og restarter heisen for å løse problemet.
+	Vi må passe på at alle som er i heisen slipper ut, før eller etter heisen restarter.
+	
+	I stedet for tradisjonell feilhåndtering, gjør vi acceptance tester i koden. Da kan vi oppdage om noe er feil, og i så fall restarte.
+	Restarting = Backward error recovery  
+	
+	Static redundancy: Hvis det er uenighet la majoriteten bestemme. Dersom det ikke er noen majoritet, gjør beregning på nytt. Dersom det fortsatt ikke er noen majoritet: enten la master bestemme, eller restart alt.
 What if:
 	- En heis mister nettverkstilkoblingen med jobber i bufferen:
 		UtfÃ¸rer heisen alle jobbene, i tilfelle alle de andre heisene har mistet strÃ¸mmen.
