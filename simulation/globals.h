@@ -36,4 +36,14 @@ typedef struct {
     elev_button_type_t button;
 } job_t;
 
+typedef struct {
+    bool up;
+    bool down;
+    int el_id;
+} floorstate_t;
+
+#define NUM_FLOORS 4
+
+typedef floorstate_t systemstate_t[NUM_FLOORS];
+
 #endif /* end of include guard: _GLOBALS_H_ */
