@@ -34,6 +34,8 @@ typedef struct {
 typedef struct {
     int                floor;
     elev_button_type_t button;
+    bool finished;
+    int assignee;
 } job_t;
 
 typedef struct {
