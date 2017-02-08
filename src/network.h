@@ -2,7 +2,7 @@
 #define _NETWORK_H_
 #include <stdint.h>
 
-void net_broadcast(char* data);
+void net_broadcast(char* data, size_t length);
 
 void net_connect(char* hostname, uint16_t port);
 

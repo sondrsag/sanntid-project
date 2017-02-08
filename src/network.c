@@ -38,9 +38,9 @@ static void removeStreamFromList(dyad_Stream* s) {
     stream_list[num_connected_streams] = NULL;
 }
 
-static void onConnect(dyad_Event* e) {
-    addStreamToList(e->stream);
-    printf("Connected to %s:%d\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
+static void onData(dyad_Event* e) {
+    printf("Received data from %s:%d: %s\n", dyad_getAddress(e->stream),
+            dyad_getPort(e->stream), e->data);
 }
 
 static void onClose(dyad_Event* e) {
@@ -48,11 +48,18 @@ static void onClose(dyad_Event* e) {
     removeStreamFromList(e->stream);
 }
 
+static void onConnect(dyad_Event* e) {
+    addStreamToList(e->stream);
+    printf("Connected to %s:%d\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
+}
+
+
 
 static void onAccept(dyad_Event* e) {
     addStreamToList(e->remote);
     printf("Accepted connection from %s:%d\n",dyad_getAddress(e->remote), dyad_getPort(e->remote));
     dyad_addListener(e->remote, DYAD_EVENT_CLOSE, onClose, NULL);
+    dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, NULL);
 }  
 
 
@@ -80,6 +87,7 @@ void net_listen(char* my_hostname, uint16_t my_port) {
     dyad_Stream* s = dyad_newStream();
     dyad_listenEx(s, my_hostname, my_port, SIZE_BACKLOG);
     dyad_addListener(s, DYAD_EVENT_ACCEPT, onAccept, NULL);
+    dyad_addListener(s, DYAD_EVENT_DATA, onData, NULL);
     return;
 }
 
@@ -92,9 +100,6 @@ void net_init(char* my_hostname, uint16_t my_port) {
 }
 
 
-void net_broadcast(char* data) {
-    data = data;
-}
 
 static int tryConnect(dyad_Stream* s, char* hostname, int port) {
     dyad_connect(s, hostname, port);
@@ -111,6 +116,7 @@ void net_connect(char* hostname, uint16_t port) {
     dyad_Stream* s = dyad_newStream();
     dyad_addListener(s, DYAD_EVENT_CONNECT, onConnect, NULL);
     dyad_addListener(s, DYAD_EVENT_CLOSE, onClose, NULL);
+    dyad_addListener(s, DYAD_EVENT_DATA, onData, NULL);
     printf("Trying to connect to %s:%d ...\n", hostname, port);
     int ret = tryConnect(s, hostname, port);
     if (ret) {
@@ -121,6 +127,13 @@ void net_connect(char* hostname, uint16_t port) {
     }
 }
 
+void net_broadcast(char* data, size_t length) {
+    printf("Broadcasting message: %s\n", data);
+    int i;
+    for (i = 0; i < num_connected_streams; ++i) {
+        dyad_write(stream_list[i], data, length);
+    }
+}
 
 char* net_getMessage(void) {
     return "test";
