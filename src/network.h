@@ -1,12 +1,16 @@
 #ifndef _NETWORK_H_
 #define _NETWORK_H_
-#include "stdint.h"
+#include <stdint.h>
 
 void net_broadcast(char* data);
 
 void net_connect(char* hostname, uint16_t port);
 
 char* net_getMessage();
+
+void net_init(char* my_hostname, uint16_t my_port);
+
+void net_listen(char* my_hostname, uint16_t my_port);
 
 //Elcom needs to know who is connect in order to figure out who is master
 //connections_t is some list of connected nodes
