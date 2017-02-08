@@ -6,7 +6,7 @@ void net_broadcast(char* data, size_t length);
 
 void net_connect(char* hostname, uint16_t port);
 
-char* net_getMessage();
+int net_getMessage(char* target);
 
 void net_init(char* my_hostname, uint16_t my_port);
 

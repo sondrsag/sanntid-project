@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdint.h>
 #include <stdbool.h>
 //#include <stdlib.h>
@@ -5,10 +6,28 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/queue.h>
 #include <pthread.h>
 #include "dyad.h"
 
 #define SIZE_BACKLOG 4
+#define MAX_MSG_SIZE 1024
+
+STAILQ_HEAD(stailhead, entry) messages_head = STAILQ_HEAD_INITIALIZER(messages_head);
+
+struct entry {
+    char message[MAX_MSG_SIZE];
+    STAILQ_ENTRY(entry) entries;
+};
+
+void addMessage(char* message) {
+    struct entry* en;
+    en = malloc(sizeof(struct entry));
+    if (en) {
+        strcpy(en->message, message);
+    }
+    STAILQ_INSERT_TAIL(&messages_head, en, entries);
+}
 
 static unsigned int num_connected_streams;
 
@@ -39,8 +58,9 @@ static void removeStreamFromList(dyad_Stream* s) {
 }
 
 static void onData(dyad_Event* e) {
-    printf("Received data from %s:%d: %s\n", dyad_getAddress(e->stream),
-            dyad_getPort(e->stream), e->data);
+    //printf("Received data from %s:%d: %s\n", dyad_getAddress(e->stream),
+    //       dyad_getPort(e->stream), e->data);
+    addMessage(e->data);
 }
 
 static void onClose(dyad_Event* e) {
@@ -75,6 +95,12 @@ static void* workerThread() {
             printf("Connected to: %s:%d\n",
                 dyad_getAddress(stream_list[i]), dyad_getPort(stream_list[i]));
         }
+        /*
+        printf("Messages in queue\n");
+        struct entry* en;
+        STAILQ_FOREACH(en, &messages_head, entries)
+            printf("%s\n", en->message);
+        */
     }
     //printf("No streams left. Shutting down\n");
     dyad_shutdown();
@@ -92,6 +118,9 @@ void net_listen(char* my_hostname, uint16_t my_port) {
 }
 
 void net_init(char* my_hostname, uint16_t my_port) {
+    //Init messagequeue
+    STAILQ_INIT(&messages_head);
+    //Init dyad
     dyad_init();
     dyad_setUpdateTimeout(0);
     net_listen(my_hostname, my_port);
@@ -103,7 +132,7 @@ void net_init(char* my_hostname, uint16_t my_port) {
 
 static int tryConnect(dyad_Stream* s, char* hostname, int port) {
     dyad_connect(s, hostname, port);
-    sleep(1);
+    usleep(250000);
     //We must update manually because the dyad worker thread may not be running
     dyad_update();
     if (dyad_getState(s) == DYAD_STATE_CONNECTED) {
@@ -128,15 +157,23 @@ void net_connect(char* hostname, uint16_t port) {
 }
 
 void net_broadcast(char* data, size_t length) {
-    printf("Broadcasting message: %s\n", data);
+    //printf("Broadcasting message: %s\n", data);
     int i;
     for (i = 0; i < num_connected_streams; ++i) {
         dyad_write(stream_list[i], data, length);
     }
 }
 
-char* net_getMessage(void) {
-    return "test";
+int net_getMessage(char* target) {
+    if (STAILQ_EMPTY(&messages_head)) {
+        return -1;
+    }
+    struct entry* en = STAILQ_FIRST(&messages_head)->message;
+    char* msg = en->message;
+    strcpy(target, msg);
+    STAILQ_REMOVE_HEAD(&messages_head, entries);
+    free(en);
+    return 0;
 }
 
 /*
