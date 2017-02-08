@@ -34,3 +34,6 @@ clean:
 rebuild:	clean all
 
 .PHONY: all rebuild clean
+
+networktest: dyad.c network.c networktest.c
+	gcc -Wall -O2 -pedantic -std=c11 $+ -lm -lpthread -D NUM_ELEVATORS=3 -o $@.exe
