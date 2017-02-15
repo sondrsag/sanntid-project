@@ -26,6 +26,7 @@ typedef struct {
     bool finished;
     int  current_floor;
     int  next_floor;
+    bool available;
 
     ElevatorActions        action;
     elev_motor_direction_t direction;
