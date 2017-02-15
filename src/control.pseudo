@@ -1,0 +1,244 @@
+
+
+
+
+
+//State machine pseudo code
+//The problem here is if this happens while elevators have received different number of jobs
+//Solution: We wait until other elevators have acknowledged the job
+void loop(void) {
+    while(true) {
+        //Check for button press
+        //Lock numJobs mutex
+        if (localJobRequests()) {
+            //When receiving a new local job we must be certain
+            //that the other elevators have received it before continuing
+            for each job {
+                validateJob();
+
+                broadcastJob();
+
+                waitForJobAcknowledge();
+
+                addJobToList();
+            }
+        }
+        sync(state_1);
+        //Check for new jobs, also local jobs
+        if (newJobsReceived() == 0) continue;
+        //To be certain that all elevators will perform same calculations
+        //we wait until all elevators report the same number of jobs
+        //We also lock the State mutex, so no other elevator can request
+        //until calculation has finished
+        waitUntilEqualNumJobs(); //What if this never happens?
+        
+        addJobsToState();
+        
+        updateElevatorStatus();
+
+        assignElevators();  //Cost function. What if all elevators are 
+                            //busy in opposite direction?
+
+        getStates();   //A mutex must lock the State so that it cannot
+                       //be read until assignElevators is done
+        State_t ss;
+
+        if(compareStates(&ss)) {
+            //We have a majority
+            assignStates(ss);    //This will force all elevators to take on the majority
+                                 //State with assigned elevators
+        } else {
+            //There's no majority
+            if (!compareStates(&ss)) {
+
+                getStates();
+
+                if(!compareStates(&ss)) {
+                    //Cannot find a majority
+                    //Master must ensure all new jobs are covered and then
+                    //force other elevators to take on this State
+                    ss = ensureAllNewJobsCovered();
+
+                    assignStates(ss);
+
+                } else assignStates(ss);
+
+            } else assignStates(ss);
+        }
+    }
+}
+
+//In this case all information is still exchanged between all elevators,
+//but we perform no checking of whether all elevators agree.
+//The master simply calculates a state and assigns it to other elevators.
+//We must still deal with the problem of losing master,
+//but that will be handled by elcom module
+//All elevators do this, but they simply discard states not coming from master.
+void loopNoRedundancy(void) {
+    while(true) {
+        while (localJobs()) {
+            job_t = ectr_getJob();
+
+            validateJob(job); //Check that fields in job struct are reasonable
+
+            broadcastJob(job);
+
+            addJobToList(job);
+        }
+        getNetworkJobs();
+        if (numJobs() == 0) continue; //Including local jobs
+
+        addJobsToState();
+        updateElevatorStatus();
+        assignElevators();
+        broadcastState();
+        //Send state to local elevator
+        //ectr_setState(state);
+        ectr_handleJob(job);
+    }
+}   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//This is the cost function which calculates which elevator should do what job
+//and updates the state
+//In order to validate the state we must ensure that all elevators
+//which have jobs assigned to them are available.
+//If they are not, then all jobs must be reassigned
+void assignElevators(void) {
+    validateState();
+    job_t job;
+    for each job in joblist {
+        for each elevator {
+            //First find idle elevator
+            //If no idle, find elevator in same direction
+            //If neither, leave job for next time
+            //Else remove job from list and update state
+        }
+    }
+}
+
+void assignStates(void) {
+    //Serialize state struct and broadcast
+    char* state_string = serialize(state);
+    elcom_broadcastState(state_string);
+}
+
+
+
+void updateElevatorStatus(void) {
+    elcom_updateElStatus(&el_status_list);
+}
+
+void elcom_updateElStatus(el_status* elsl) {
+    //Elcom constantly updates the status of all elevators
+    //We simply copy the current status into elsl
+    copy_el_status(&elsl, &local_elsl);
+}
+
+
+//This is to be done constantly, to ensure that we know the network state
+//Each node shall respond with its elevator status
+//Thus we always know who is connected and the elevator status
+void net_pollNetwork(void) {
+    for each node {
+        sendAreYouAlive(node);
+    }
+}
+
+//Local function in elcom module
+//Async so we might have to sleep
+//Maybe I can use a semaphore to count the number of responses?
+//Actually, the network should be constantly polling the other nodes, so that it knows if they are connected
+/*
+void updateNetwork(void) {
+    //We shall wait until all elevators have responded, so we init to NUM_ELEVATORS+1
+    //and the semaphore will release when its value is 1.
+    //What if an elevator does no respond? sem_timedwait
+    sem_init(&sem_el_status, 0, -NUM_ELEVATORS + 1);
+    for each elevator {
+        //All contacted elevators respond to this status request
+        //upon response we call sem_post(&sem_el_status) in the response handler
+        areYouAlive(elevator);
+    }
+    sem_wait(&sem_el_status);
+}
+*/
+
+void addJobsToState(void) {
+    //Update the local state variable
+    for each job in joblist {
+        //Add job to state, but does not assign an elevator
+        addJobToState(job);
+    }
+}   
+
+bool localJobs(void) {
+    return ectr_numLocalJobs();
+}
+
+int ectr_numLocalJobs(void) {
+    //elctrl module keeps track of all unique button presses for this module
+    //in variable numJobs
+    return numJobs;
+}
+
+job_t ectr_getJob(void) {
+    //Pops a job from the list of received jobs. Must use mutex and decrement numJobs
+    job_t job = joblist_pop();
+    return job;
+}
+
+void broadcastJob(job_t job) {
+    //Elcom module serializes and sends the job to the other elevators
+    elcom_broadcastJob(job);
+}
+
+void elcom_broadcastJob(job_t job) {
+    char* job_string = serialize(job);
+    net_broadcast(job_string);
+}
+
+void net_broadcast(char* job_string) {
+    //Iterate over all connections and send string
+}
+
+void addJobToList(job_t job) {
+    //Add to jobList in control module
+    joblist_add(job);
+}
+
+int getNetworkJobs(void) {
+    job_t job;
+    while(elcom_numJobs()) {
+        job = elcom_getJob();
+        joblist_add(job);
+    }
+}
+
+int elcom_numJobs(void) {
+    //Module keeps track of number of jobs
+    return numJobs;
+    return joblist_count();
+}
+
+job_t elcom_getJob() {
+    return joblist_pop();
+}
+
+int numJobs(void) {
+    //Count number of jobs in joblist
+    return joblist_count();
+}
