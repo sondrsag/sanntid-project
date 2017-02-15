@@ -12,6 +12,8 @@
 
 #define SIZE_BACKLOG 4
 #define MAX_MSG_SIZE 1024
+//Number of symbols in an IP address including dots
+#define SIZE_IP 15
 
 STAILQ_HEAD(stailhead, entry) messages_head = STAILQ_HEAD_INITIALIZER(messages_head);
 
@@ -20,13 +22,18 @@ struct entry {
     STAILQ_ENTRY(entry) entries;
 };
 
+pthread_mutex_t msg_mutex;
+pthread_mutex_t stream_mutex;
+
 void addMessage(char* message) {
+    pthread_mutex_lock(&msg_mutex);
     struct entry* en;
     en = malloc(sizeof(struct entry));
     if (en) {
         strcpy(en->message, message);
     }
     STAILQ_INSERT_TAIL(&messages_head, en, entries);
+    pthread_mutex_unlock(&msg_mutex);
 }
 
 static unsigned int num_connected_streams;
@@ -118,6 +125,17 @@ void net_listen(char* my_hostname, uint16_t my_port) {
 }
 
 void net_init(char* my_hostname, uint16_t my_port) {
+    //Init mutexes
+    if (pthread_mutex_init(&msg_mutex, NULL) != 0)
+    {
+        printf("\n mutex init failed\n");
+        exit(1);
+    }
+    if (pthread_mutex_init(&stream_mutex, NULL) != 0)
+    {
+        printf("\n mutex init failed\n");
+        exit(1);
+    }
     //Init messagequeue
     STAILQ_INIT(&messages_head);
     //Init dyad
@@ -168,16 +186,21 @@ int net_getMessage(char* target) {
     if (STAILQ_EMPTY(&messages_head)) {
         return -1;
     }
+    pthread_mutex_lock(&msg_mutex);
     struct entry* en = STAILQ_FIRST(&messages_head)->message;
     char* msg = en->message;
     strcpy(target, msg);
     STAILQ_REMOVE_HEAD(&messages_head, entries);
     free(en);
+    pthread_mutex_unlock(&msg_mutex);
     return 0;
 }
 
-/*
-connections_t net_getConnectedNodes(void) {
-    return 0;
+void net_getConnectedIps(char* ip_buf[]) {
+    int i;
+    pthread_mutex_lock(&stream_mutex);
+    for ( i = 0; i < num_connected_streams; ++i) {
+        strcpy(ip_buf[i], dyad_getAddress(stream_list[i]));
+    }
+    pthread_mutex_unlock(&stream_mutex);
 }
-*/
