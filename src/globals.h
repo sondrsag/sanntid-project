@@ -26,6 +26,7 @@ typedef struct {
     bool finished;
     int  current_floor;
     int  next_floor;
+    bool available;
 
     ElevatorActions        action;
     elev_motor_direction_t direction;
@@ -37,18 +38,28 @@ typedef struct {
     elev_button_type_t button;
     bool finished;
     int assignee;
-} job_t;
+} Job_t;
 
 typedef struct {
     bool up;
     bool down;
     int el_id_up; //ANTON, why do we need el_id here?
-	int el_id_down;
-} floorstate_t;
+    int el_id_down;
+} Floorstate_t;
+
+/*
+typedef struct {
+    int floor;
+    int el_id;
+} InternalCall_t
+*/
 
 #define NUM_FLOORS 4
+#define NUM_ELEVATORS 3
 
-typedef floorstate_t OutsidecCallsList_t[NUM_FLOORS]; // ANTON, suggestion for the name: OutsidecCallsList
+typedef Floorstate_t OutsidecCallsList_t[NUM_FLOORS]; // ANTON, suggestion for the name: OutsidecCallsList
+//typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS
+typedef bool InternalCalls_t[NUM_ELEVATORS][NUM_FLOORS];
 
 #endif /* end of include guard: _GLOBALS_H_ */
 
