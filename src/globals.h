@@ -30,7 +30,7 @@ typedef struct {
 
     ElevatorActions        action;
     elev_motor_direction_t direction;
-} ElevatorStatus;
+} ElevatorStatus_t;
 
 //used both to comunicate comands from cabin and from outside
 typedef struct {
