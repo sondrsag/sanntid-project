@@ -1,10 +1,10 @@
 #include <unistd.h>
-#include "control.h"
+#include "work_distribution.h"
 #include "elevatorcontrol.h"
 
 int main() {
-    ectr_start(&ctr_updateElevStatus, &ctr_receiveJob);
-    ctr_start(&ectr_handleJob);
+    ectr_start(&wd_updateLocalElevStatus, &wd_receiveJob);
+    work_distribution_start(&ectr_handleJob);
 
     while (1) {
         usleep(1000);

@@ -7,17 +7,17 @@
 #include <unistd.h>
 
 #define MAX_JOBS 20
-static job_t           jobs[MAX_JOBS];
+static Job_t           jobs[MAX_JOBS];
 static unsigned int    num_jobs;    // Number of pending jobs
-static ElevatorStatus  status;
+static ElevatorStatus_t  status;
 static pthread_mutex_t ectr_mtx;
 
-void (*updateStatus)(ElevatorStatus);   // control module callback
-void (*sendJob)(job_t);                 // control module callback
+void (*updateStatus)(ElevatorStatus_t);   // control module callback
+void (*sendJob)(Job_t);                 // control module callback
 
 void* runElevatorcontrol();
-void  ectr_updateStatus(ElevatorStatus);
-void  ectr_receiveJob(job_t);
+void  ectr_updateStatus(ElevatorStatus_t);
+void  ectr_receiveJob(Job_t);
 
 void ectr_start(UpdateStatusCallback_t stat_callback,
                 SendJobCallback_t      job_callback)
@@ -33,7 +33,7 @@ void* runElevatorcontrol()
 {
     pthread_mutex_lock(&ectr_mtx);
     num_jobs = 0;
-    memset(jobs, 0, MAX_JOBS * sizeof(job_t));
+    memset(jobs, 0, MAX_JOBS * sizeof(Job_t));
 
     status.working       = false;
     status.finished      = false;
@@ -48,7 +48,7 @@ void* runElevatorcontrol()
     bool  finished;
     int   next_floor;
     int   num;
-    job_t top_job;
+    Job_t top_job;
     while (1) {
         pthread_mutex_lock(&ectr_mtx);
         working    = status.working;
@@ -65,6 +65,10 @@ void* runElevatorcontrol()
                         num_jobs > 0));
                 num_jobs--;
                 num     = num_jobs;
+
+		top_job.finished = true;
+		sendJob(top_job);
+
                 top_job = (num_jobs > 0) ? jobs[num_jobs - 1] : top_job;
 
                 status.finished = false;
@@ -84,15 +88,15 @@ void* runElevatorcontrol()
     return NULL;
 } // runElevatorcontrol
 
-void ectr_updateStatus(ElevatorStatus new_status)
+void ectr_updateStatus(ElevatorStatus_t new_status)
 {
-    pthread_mutex_lock(&ectr_mtx);
+	pthread_mutex_lock(&ectr_mtx);
     status = new_status;
     pthread_mutex_unlock(&ectr_mtx);
     updateStatus(new_status);
 } // ectr_updateStatus
 
-bool putFirst(job_t job)
+bool putFirst(Job_t job)
 {
     bool ret = false;
     pthread_mutex_lock(&ectr_mtx);
@@ -110,7 +114,7 @@ bool putFirst(job_t job)
     return ret;
 } /* putFirst */
 
-bool goodPos(job_t job, size_t pos)
+bool goodPos(Job_t job, size_t pos)
 {
     pthread_mutex_lock(&ectr_mtx);
     int floor_a  = jobs[pos].floor;
@@ -171,7 +175,7 @@ bool goodPos(job_t job, size_t pos)
     return ret;
 } /* goodPos */
 
-size_t findPosition(job_t job)
+size_t findPosition(Job_t job)
 {
     pthread_mutex_lock(&ectr_mtx);
     size_t pos = num_jobs;
@@ -187,7 +191,7 @@ size_t findPosition(job_t job)
     return pos;
 } // findPosition
 
-void insertJob(job_t job, size_t pos)
+void insertJob(Job_t job, size_t pos)
 {
     assert(("Inserting job at invalid position",
             pos < MAX_JOBS));
@@ -206,7 +210,7 @@ void insertJob(job_t job, size_t pos)
     pthread_mutex_unlock(&ectr_mtx);
 } // insertJob
 
-bool validJob(job_t job)
+bool validJob(Job_t job)
 {
     assert(("Job validation: floor out of bounds",
             job.floor >= 0 && job.floor < N_FLOORS));
@@ -240,7 +244,7 @@ bool validJob(job_t job)
     return ret;
 } // validJob
 
-void ectr_handleJob(job_t job)
+void ectr_handleJob(Job_t job)
 {
     if (validJob(job)) {
         size_t pos = findPosition(job);
@@ -248,10 +252,11 @@ void ectr_handleJob(job_t job)
     }
 } // ectr_handleJob
 
-void ectr_receiveJob(job_t job)
+void ectr_receiveJob(Job_t job)
 {
     if (job.button == BUTTON_COMMAND) {
         ectr_handleJob(job);
+		sendJob(job);
     } else {
         sendJob(job);
     }

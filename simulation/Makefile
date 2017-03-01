@@ -8,7 +8,7 @@ CFLAGS = -std=gnu11 -g -O2 -Wall -Wextra -pedantic #-Wno-unused-value
 LDFLAGS = -lcomedi -lm -lpthread
 
 # list of sources
-ELEVSRC = lib/timer.c elev.c io.c driver.c control.c elevatorcontrol.c main.c
+ELEVSRC = lib/timer.c elev.c io.c driver.c work_distribution.c elevatorcontrol.c main.c
 
 # program executable file name.
 TARGET = elevator
