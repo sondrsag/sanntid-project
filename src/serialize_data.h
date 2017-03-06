@@ -4,9 +4,10 @@
 
 typedef enum {
     JOB   = 0,
-    ELEVATOR_STATUS = 1,
-    OUTSIDE_CALLS   = 2,
-    NOT_RECOGNIZED   = 3
+    ELEVATOR_STATUS,
+    OUTSIDE_CALLS,
+    INTERNAL_CALLS,
+    NOT_RECOGNIZED,
 } Message_type_t;
 
 Message_type_t identify_message_type(char* buffer);

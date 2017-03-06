@@ -9,6 +9,8 @@ void elcom_broadcastOutsideCallsList(OutsideCallsList_t outside_calls_list);
 
 void elcom_broadcastElevatorStatus(ElevatorStatus_t status);
 
+void elcom_broadcastInternalCallsList(InternalCallsList_t calls_list);
+
 void elcom_init(char* ips_and_ports[]);
 
 int elcom_numJobsReceived(void);

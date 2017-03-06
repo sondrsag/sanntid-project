@@ -60,7 +60,7 @@ typedef struct {
 
 typedef FloorCalls_t OutsideCallsList_t[NUM_FLOORS]; 
 //typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS
-typedef bool InternalCalls_t[NUM_ELEVATORS][NUM_FLOORS];
+typedef bool InternalCallsList_t[NUM_ELEVATORS][NUM_FLOORS];
 
 #endif /* end of include guard: _GLOBALS_H_ */
 

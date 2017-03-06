@@ -54,6 +54,16 @@ void printOutsideCallsList(OutsideCallsList_t list) {
     }
 }
 
+void printInternalCallsList(InternalCallsList_t list) {
+    printf("Printing internal calls_list\n");
+    for ( size_t elevator = 0; elevator < NUM_ELEVATORS; ++elevator ) {
+        for ( size_t floor = 0; floor < NUM_FLOORS; ++floor ) {
+            printf("%d ", (int)list[elevator][floor]);
+        }
+        putc('\n', stdout);
+    }
+}
+
 static void deserializeMessageAndDistribute(Message_type_t message_type,
             char* message, size_t message_length) {
 
@@ -95,7 +105,7 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
         OutsideCallsList_t list;
         int ret = de_serialize_OutsideCallsList_from_buffer(message, list);
         if (ret == -1) {
-            fprintf(stderr, ("Could not deserialize message into ElevatorStatus."
+            fprintf(stderr, ("Could not deserialize message into external calls list."
                              "Malformed or missing data. Discarding"));
             fprintf(stderr, "Message was:\n");
             printMessage(message, message_length);
@@ -107,6 +117,19 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
         putc('\n', stdout);
         */
         //sendCallsListToWd()
+    }
+    else if (message_type == INTERNAL_CALLS) {
+        InternalCallsList_t calls_list;
+        int ret = deserializeInternalCallsListFromBuffer(message, calls_list);
+        if (ret) {
+            fprintf(stderr, ("Could not deserialize internal calls list message."
+                             "Discarding.\n"
+                             "Message was:\n"));
+            printMessage(message, message_length);
+            return;
+        }
+        printInternalCallsList(calls_list);
+        //Send data to wd
     }
     else {
         fprintf(stderr, "Unable to interpret message, discarding.\nMessage was: ");
@@ -160,6 +183,14 @@ void elcom_broadcastOutsideCallsList(OutsideCallsList_t outside_calls_list) {
 
     serialize_OutsideCallsList_into_buffer(outside_calls_list,
         sizeof(OutsideCallsList_t), buf, sizeof(buf));
+
+    net_broadcast(buf, sizeof(buf));
+}
+
+void elcom_broadcastInternalCallsList(InternalCallsList_t calls_list) {
+    char buf[MESSAGE_LENGTH] = {0};
+
+    serializeInternalCallsListIntoBuffer(calls_list, buf, sizeof(buf));
 
     net_broadcast(buf, sizeof(buf));
 }

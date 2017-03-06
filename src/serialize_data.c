@@ -15,6 +15,7 @@ Message_type_t identify_message_type(char* buffer)
 	if(dummy[0]=='j'){	for_return=JOB;}
 	else if(dummy[0]=='e'){	for_return=ELEVATOR_STATUS;}
 	else if(dummy[0]=='o'){	for_return=OUTSIDE_CALLS;}
+    else if(dummy[0]=='i'){ for_return=INTERNAL_CALLS;}
 	else{for_return=NOT_RECOGNIZED;	}
 	
 	return for_return;
