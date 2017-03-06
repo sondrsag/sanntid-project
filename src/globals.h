@@ -1,6 +1,7 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
+#include <stdint.h>
 #include <stdbool.h>
 
 typedef enum {
@@ -43,9 +44,9 @@ typedef struct {
 typedef struct {
     bool up;
     bool down;
-    int el_id_up; //ANTON, why do we need el_id here?
-    int el_id_down;
-} Floorstate_t;
+    uint8_t el_id_up;
+    uint8_t el_id_down;
+} FloorCalls_t;
 
 /*
 typedef struct {
@@ -54,10 +55,10 @@ typedef struct {
 } InternalCall_t
 */
 
-#define NUM_FLOORS 4
-#define NUM_ELEVATORS 3
+//#define NUM_FLOORS 4
+//#define NUM_ELEVATORS 3
 
-typedef Floorstate_t OutsidecCallsList_t[NUM_FLOORS]; // ANTON, suggestion for the name: OutsidecCallsList
+typedef FloorCalls_t OutsideCallsList_t[NUM_FLOORS]; 
 //typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS
 typedef bool InternalCalls_t[NUM_ELEVATORS][NUM_FLOORS];
 
