@@ -170,6 +170,38 @@ int de_serialize_OutsideCallsList_from_buffer(char const * buffer, OutsideCallsL
 }
 
 
+int serializeInternalCallsListIntoBuffer(InternalCallsList_t calls_list, char* buffer,
+        size_t buffer_size) {
+    if (buffer_size < (sizeof(InternalCallsList_t)*2 + sizeof("internal "))) {
+        fprintf(stderr, ("Too small buffer size when serializing internal calls list."
+                         "Size is %zd"), buffer_size);
+        return -1;
+    }
+    strcpy(buffer, "internal ");
+    char* buf_ptr = strchr(buffer, ' ') + 1;
+    for(size_t elevator = 0; elevator < NUM_ELEVATORS; ++elevator) {
+        for (size_t floor = 0; floor < NUM_FLOORS; ++floor) {
+            sprintf(buf_ptr, "%d ", calls_list[elevator][floor]);
+            buf_ptr = strchr(buf_ptr, ' ') + 1;
+        }
+    }
+    return 0;
+}
+
+int deserializeInternalCallsListFromBuffer(char const * buffer,
+        InternalCallsList_t calls_list) {
+    //Skip message identifier
+    char* buf_ptr = strchr(buffer, ' ') + 1;
+    for(size_t elevator = 0; elevator < NUM_ELEVATORS; ++elevator) {
+        for (size_t floor = 0; floor < NUM_FLOORS; ++floor) {
+            sscanf(buf_ptr, "%d ", (int*)&calls_list[elevator][floor]);
+            buf_ptr = strchr(buf_ptr, ' ') + 1;
+        }
+    }
+
+    return 0;
+}
+
 
 //////////////////
 /* Will not be in use*/
