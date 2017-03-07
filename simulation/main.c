@@ -1,5 +1,5 @@
 #include <unistd.h>
-#include "control.h"
+#include "maincontrol.h"
 #include "elevatorcontrol.h"
 
 int main() {
