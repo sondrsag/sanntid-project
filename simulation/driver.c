@@ -14,15 +14,15 @@ static struct {
 static int  job_btn; // To keep track of which buttons light to switch of after current job
 static bool stopped;
 
-static ElevatorStatus  status;
+static ElevatorStatus_t  status;
 static pthread_mutex_t status_mtx;
 
-static void (*updateStatus)(ElevatorStatus); // elevatorcontrol module callback
-static void (*sendJob)(job_t); // elevatorcontrol module callback
+static void (*updateStatus)(ElevatorStatus_t); // elevatorcontrol module callback
+static void (*sendJob)(Job_t); // elevatorcontrol module callback
 
 void  evalJobProgress(void);
 void  checkInputs(void);
-bool  drv_startJob(job_t job);
+bool  drv_startJob(Job_t job);
 void* runDriver();
 
 void drv_start(UpdateStatusCallback_t stat_callback, SendJobCallback_t job_callback)
@@ -44,6 +44,7 @@ void* runDriver()
     memset(input.lamps, 0, N_BUTTONS * N_FLOORS * sizeof(int));
 
     status.working       = false;
+	status.available	 = true;
     status.finished      = false;
     status.action        = IDLE;
     status.current_floor = elev_get_floor_sensor_signal();
@@ -85,7 +86,7 @@ void* runDriver()
     return NULL;
 } // runDriver
 
-bool drv_startJob(job_t job)
+bool drv_startJob(Job_t job)
 {
     assert(("Starting job with floor out of bounds",
             job.floor >= 0 && job.floor < N_FLOORS));
@@ -204,7 +205,7 @@ void checkButton(elev_button_type_t button, int floor)
                     (button != BUTTON_CALL_DOWN || floor != 0) &&
                     (button != BUTTON_CALL_UP || floor != N_FLOORS - 1)));
 
-            job_t new_job;
+            Job_t new_job;
             new_job.floor  = floor;
             new_job.button = button;
             pthread_mutex_lock(&status_mtx);

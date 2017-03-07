@@ -9,6 +9,6 @@
 void ectr_start(UpdateStatusCallback_t stat_callback,
                 SendJobCallback_t      job_callback);
 
-void ectr_handleJob(job_t job);
+void ectr_handleJob(Job_t job);
 
 #endif /* end of include guard: _ELEVATORCONTROL_H_ */
