@@ -13,7 +13,7 @@ typedef enum {
 typedef enum {
     BUTTON_CALL_UP   = 0,
     BUTTON_CALL_DOWN = 1,
-    BUTTON_COMMAND   = 2
+    BUTTON_COMMAND   = 2 //think of changing name to cab_button or similar
 } elev_button_type_t;
 
 typedef enum {
@@ -27,13 +27,12 @@ typedef struct {
     bool finished;
     int  current_floor;
     int  next_floor;
-    bool available;
+    bool available; //added 2017.02.28, Anton
 
     ElevatorActions        action;
     elev_motor_direction_t direction;
 } ElevatorStatus_t;
 
-//used both to comunicate comands from cabin and from outside
 typedef struct {
     int                floor;
     elev_button_type_t button;
@@ -44,33 +43,24 @@ typedef struct {
 typedef struct {
     bool up;
     bool down;
-    uint8_t el_id_up;
-    uint8_t el_id_down;
+    //uint8_t el_id_up; // should be 0 when none is assigned
+    //uint8_t el_id_down; 
+	int el_id_up; //added 2017.02.28, Anton
+	int el_id_down; //added 2017.02.28, Anton 
 } FloorCalls_t;
+#define NoneElevator_assigned -1 //has to correspond to the type of FloorCalls_t.el_id_up
 
-typedef struct {
-    bool up;
-    bool down;
-    int el_id_up; //added 2017.02.28, Anton
-    int el_id_down; //added 2017.02.28, Anton
-} FloorState_t;
 
 #define NUM_FLOORS 4
 #define NUM_ELEVATORS 3 // added 2017.02.28, Anton
-#define TIME 1.0  //Anton new to be used in all modules for synchronisation
+#define TIME 0.25  //Anton new to be used in all modules for synchronisation
 
-/*
-typedef struct {
-    int floor;
-    int el_id;
-} InternalCall_t
-*/
-
-typedef FloorCalls_t OutsideCallsList_t[NUM_FLOORS];
-//typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS
+typedef FloorCalls_t OutsideCallsList_t[NUM_FLOORS]; 
+//typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS]
 typedef bool InternalCallsList_t[NUM_ELEVATORS][NUM_FLOORS];
 
-#endif /* end of include guard: _GLOBALS_H_ */
+//typedef floorstate_t systemstate_t[NUM_FLOORS]; //OLD version of massive for OutsideCallsList
+//typedef FloorState_t OutsideCallsList_t[NUM_FLOORS]; // ANTON, suggestion for the name: OutsidecCallsList
+//typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS //OLD version of massive
 
-//    Contact GitHub API Training Shop Blog About
-//    © 2017 GitHub, Inc. Terms Privacy Security Status Help
+#endif /* end of include guard: _GLOBALS_H_ */

@@ -9,8 +9,8 @@ LDFLAGS = -lcomedi -lm -lpthread
 
 # list of sources
 #ELEVSRC = timer.c elev.c io.c driver.c elevatorcontrol.c dyad.c network.c elcom.c serialize_data.c work_distribution.c main.c
-ELEVSRC = timer.c elev.c io.c driver.c elevatorcontrol.c work_distribution.c main.c
-
+#ELEVSRC = timer.c elev.c io.c driver.c elevatorcontrol.c work_distribution.c main.c
+ELEVSRC = timer.c elev.c io.c driver.c work_distribution.c elevatorcontrol.c dyad.c network.c elcom.c serialize_data.c utils.c main.c
 # program executable file name.
 TARGET = elevator
 
