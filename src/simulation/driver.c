@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "unistd.h"
-#include "timer.h"
+#include "lib/timer.h"
 
 static struct {
     int buttons[N_BUTTONS][N_FLOORS];
