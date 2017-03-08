@@ -6,6 +6,8 @@
 #include "unistd.h"
 #include "timer.h"
 
+#define MV_TIMEOUT 400000
+
 static struct {
     int buttons[N_BUTTONS][N_FLOORS];
     int lamps[N_BUTTONS][N_FLOORS];
@@ -14,8 +16,8 @@ static struct {
 static int  job_btn; // To keep track of which buttons light to switch of after current job
 static bool stopped;
 
-static ElevatorStatus_t  status;
-static pthread_mutex_t status_mtx;
+static ElevatorStatus_t status;
+static pthread_mutex_t  status_mtx;
 
 static void (*updateStatus)(ElevatorStatus_t); // elevatorcontrol module callback
 static void (*sendJob)(Job_t); // elevatorcontrol module callback
@@ -44,7 +46,7 @@ void* runDriver()
     memset(input.lamps, 0, N_BUTTONS * N_FLOORS * sizeof(int));
 
     status.working       = false;
-	status.available	 = true;
+    status.available     = true;
     status.finished      = false;
     status.action        = IDLE;
     status.current_floor = elev_get_floor_sensor_signal();
@@ -60,16 +62,35 @@ void* runDriver()
     }
 
     elev_set_floor_indicator(status.current_floor);
+
+    int last_floor = status.current_floor;
     pthread_mutex_unlock(&status_mtx);
 
     // Avoiding function calls during locked mtx with these variables
-    bool working;
+    bool            working;
+    int             current_floor;
+    unsigned int    timeout_counter = 0;
+    ElevatorActions action;
     while (1) {
         pthread_mutex_lock(&status_mtx);
-        working = status.working;
+        working       = status.working;
+        current_floor = status.current_floor;
+        action        = status.action;
         pthread_mutex_unlock(&status_mtx);
 
         if (working) evalJobProgress();
+
+        if (current_floor == last_floor &&) {
+            timeout_counter++;
+
+            if (timeout_counter == MV_TIMEOUT) {
+                pthread_mutex_lock(&status_mtx);
+                status.available = false;
+                pthread_mutex_unlock(&status_mtx);
+            }
+        } else if (timeout_counter != 0) {
+            timeout_counter = 0;
+        }
 
         checkInputs();
 
