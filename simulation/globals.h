@@ -1,6 +1,7 @@
 #ifndef _GLOBALS_H_
 #define _GLOBALS_H_
 
+#include <stdint.h>
 #include <stdbool.h>
 
 typedef enum {
@@ -42,18 +43,24 @@ typedef struct {
 typedef struct {
     bool up;
     bool down;
-    int el_id_up; //added 2017.02.28, Anton
-    int el_id_down; //added 2017.02.28, Anton 
-} FloorState_t;
+    //uint8_t el_id_up; // should be 0 when none is assigned
+    //uint8_t el_id_down; 
+	int el_id_up; //added 2017.02.28, Anton
+	int el_id_down; //added 2017.02.28, Anton 
+} FloorCalls_t;
+#define NoneElevator_assigned -1 //has to correspond to the type of FloorCalls_t.el_id_up
+
 
 #define NUM_FLOORS 4
 #define NUM_ELEVATORS 3 // added 2017.02.28, Anton
-#define TIME 1.0  //Anton new to be used in all modules for synchronisation
+#define TIME 0.25  //Anton new to be used in all modules for synchronisation
 
+typedef FloorCalls_t OutsideCallsList_t[NUM_FLOORS]; 
+//typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS]
+typedef bool InternalCallsList_t[NUM_ELEVATORS][NUM_FLOORS];
 
 //typedef floorstate_t systemstate_t[NUM_FLOORS]; //OLD version of massive for OutsideCallsList
 //typedef FloorState_t OutsideCallsList_t[NUM_FLOORS]; // ANTON, suggestion for the name: OutsidecCallsList
 //typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS //OLD version of massive
-
 
 #endif /* end of include guard: _GLOBALS_H_ */

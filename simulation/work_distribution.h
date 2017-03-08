@@ -14,7 +14,8 @@ void wd_updateLocalElevStatus(ElevatorStatus_t new_status);
 void wd_receiveJob(Job_t job); 
 
 /*function for communication module*/
-void wd_receiveCallsListFromPrimary(FloorState_t* newOutsideCallsList); 
+//void wd_receiveCallsListFromPrimary(FloorState_t* newOutsideCallsList); 
+void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList); 
 void wd_HandleInternalCallsAfterRestart();
 void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id);
 

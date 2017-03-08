@@ -1,8 +1,3 @@
-/*  TODO:
- -  Add timeout checks. In case the elevator stops (is hold still), so it
-    technically hasn't crashed but still doesn't move.
- -  Pass internal jobs on to maincontrol, but start the job at once. */
-
 #include "elevatorcontrol.h"
 #include <assert.h>
 #include <pthread.h>

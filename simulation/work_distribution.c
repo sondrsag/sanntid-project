@@ -12,12 +12,15 @@ static pthread_mutex_t wd_mtx;
 int local_assignee_id;  
 
 ElevatorStatus_t All_elevators[NUM_ELEVATORS]; //is it needed to use static here or not?
-FloorState_t OutsideCallsList[NUM_FLOORS];
-bool InternalCalls[NUM_ELEVATORS][NUM_FLOORS];
+OutsideCallsList_t OutsideCallsList;
+//FloorState_t OutsideCallsList[NUM_FLOORS];
+InternalCallsList_t InternalCalls;
+//bool InternalCalls[NUM_ELEVATORS][NUM_FLOORS];
 
 
 void* wd_WorkDistributionLoop();
-void AssignElevators(FloorState_t *OutsideCallsList,ElevatorStatus_t *All_elevators);
+//void AssignElevators(FloorState_t *OutsideCallsList,ElevatorStatus_t *All_elevators);
+void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_elevators);
 int ReturnElevatorId(ElevatorStatus_t *All_elevators, elev_motor_direction_t call_direction, int call_floor);
 void Handle_jobs_assigned();
 
@@ -42,16 +45,17 @@ void init_global_variables()
 	}
 	for(int i=0;i<NUM_FLOORS;i++)
 	{
-		OutsideCallsList[i].up=false;
+		OutsideCallsList[i].up         = false;
 		
-		OutsideCallsList[i].el_id_up=-1;
-		OutsideCallsList[i].down=false;
-		OutsideCallsList[i].el_id_down=-1;
+		OutsideCallsList[i].el_id_up   = NoneElevator_assigned;
+		OutsideCallsList[i].down       = false;
+		OutsideCallsList[i].el_id_down = NoneElevator_assigned;
 	}
 	pthread_mutex_unlock(&wd_mtx);
 }
 
-void wd_receiveCallsListFromPrimary(FloorState_t* newOutsideCallsList)
+//void wd_receiveCallsListFromPrimary(FloorCalls_t* newOutsideCallsList)
+void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList)
 {
 	pthread_mutex_lock(&wd_mtx);
 	for(int i=0;i<NUM_FLOORS;i++)
@@ -62,7 +66,10 @@ void wd_receiveCallsListFromPrimary(FloorState_t* newOutsideCallsList)
 	Handle_jobs_assigned();
 }
 
-void wd_HandleInternalCallsAfterRestart(bool** newInternalCalls)
+
+
+//void wd_HandleInternalCallsAfterRestart(bool** newInternalCalls)
+void wd_HandleInternalCallsAfterRestart(InternalCallsList_t newInternalCalls)
 {
 	Job_t dummy_job;
 	
@@ -88,7 +95,7 @@ void wd_HandleInternalCallsAfterRestart(bool** newInternalCalls)
 void* wd_WorkDistributionLoop() {
     
 	init_global_variables();
-    sleep(2*TIME); //Wait for first
+    sleep(10*TIME); //Wait for the start of communication module
     // Communication module must ASK TO HANDLE JOBS for people stack in elevator after power cut or etc.
     while(true) {
         sleep(TIME);
@@ -132,14 +139,14 @@ void Handle_jobs_assigned()
 //In order to validate the state we must ensure that all elevators
 //which have jobs assigned to them are available.
 //If they are not, then all jobs must be reassigned
-void AssignElevators(FloorState_t *OutsideCallsList,ElevatorStatus_t *All_elevators) {
+void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_elevators) {
     pthread_mutex_lock(&wd_mtx);
 	for(int i_f=0; i_f<NUM_FLOORS;i_f++)
 	{
-		if(OutsideCallsList[i_f].up == true && OutsideCallsList[i_f].el_id_up == -1){
+		if(OutsideCallsList[i_f].up == true && OutsideCallsList[i_f].el_id_up == NoneElevator_assigned){
 			OutsideCallsList[i_f].el_id_up=ReturnElevatorId(All_elevators, DIRN_UP,i_f);
 		}
-		if(OutsideCallsList[i_f].down == true && OutsideCallsList[i_f].el_id_down == -1){
+		if(OutsideCallsList[i_f].down == true && OutsideCallsList[i_f].el_id_down == NoneElevator_assigned){
 			OutsideCallsList[i_f].el_id_down=ReturnElevatorId(All_elevators, DIRN_DOWN,i_f);
 		}		
 	}	/*Anton: should the return be to another array of OutsideCallsList? As we plan to use only one comming from Primary elevator?ANSWER: functions fine now*/
@@ -157,7 +164,7 @@ int ReturnElevatorId(ElevatorStatus_t *All_elevators, elev_motor_direction_t cal
 			{return i_e;}
 		}
 		
-	return -1;//If neither, leave job for next time
+	return NoneElevator_assigned;//If neither, leave job for next time
 }
 
 // if on elevator dyes all outside jobs assigned to it should be reassigned. in two steps. first remove elevator id from the outside calls, next can
@@ -178,10 +185,10 @@ void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 		for(int i_f=0; i_f<NUM_FLOORS;i_f++)
 		{
 			if(OutsideCallsList[i_f].el_id_up == assignee_id){
-				OutsideCallsList[i_f].el_id_up = -1;
+				OutsideCallsList[i_f].el_id_up = NoneElevator_assigned;
 			}
 			if(OutsideCallsList[i_f].el_id_down == assignee_id){
-				OutsideCallsList[i_f].el_id_down = -1;
+				OutsideCallsList[i_f].el_id_down = NoneElevator_assigned;
 			}		
 		}
 	}
@@ -191,7 +198,9 @@ void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 void wd_receiveJob(Job_t job)
 {
 	//FIRST SEND JOB FURTHER TO COMMUNICATION MODULE!!! then work with local copy. Function from communication module should be sued here.
-
+	/*to_be_inserted
+	elcom_broadcastJob(job);	
+	*/
 	pthread_mutex_lock(&wd_mtx);
 	if(job.button==BUTTON_COMMAND) //internal, i.e., cabin jobs
 	{//at the moment will not function as internal commands are not sent from elevatorcontrol, but required for back up at restart of elevator after crush
@@ -210,13 +219,13 @@ void wd_receiveJob(Job_t job)
 		{
 			if(job.button==BUTTON_CALL_UP)
 			{
-				OutsideCallsList[job.floor].up=false; 
-				OutsideCallsList[job.floor].el_id_up=-1;
+				OutsideCallsList[job.floor].up = false; 
+				OutsideCallsList[job.floor].el_id_up = NoneElevator_assigned;
 			}			
 			else
 			{
-				OutsideCallsList[job.floor].down=false; 
-				OutsideCallsList[job.floor].el_id_down=-1;
+				OutsideCallsList[job.floor].down = false; 
+				OutsideCallsList[job.floor].el_id_down = NoneElevator_assigned;
 			}
 		}
 		else //set jobs to be active for this floor
