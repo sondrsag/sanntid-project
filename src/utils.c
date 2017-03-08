@@ -1,7 +1,7 @@
 #include "utils.h"
 #include <math.h>
 
-int str2int(char* str) {
+int str2int(char const * str) {
     int sum = 0;
     int i = 0;
     //First find end of string
