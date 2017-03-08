@@ -8,6 +8,7 @@
 #include "network.h"
 #include "serialize_data.h"
 #include "globals.h"
+#include <stdbool.h>
 
 //#define SIZE_OF_JOB_STRING 100
 //#define SIZE_OF_CALLSLIST_STRING 100
@@ -15,6 +16,10 @@
 #define MESSAGE_LENGTH 64*NUM_FLOORS
 
 static int str2int(char* str);
+
+///* to_be_inserted
+static bool elcom_just_started;
+//*/
 
 static void printMessage(char* message, size_t length) {
     size_t i;
@@ -65,7 +70,7 @@ void printInternalCallsList(InternalCallsList_t list) {
 }
 
 static void deserializeMessageAndDistribute(Message_type_t message_type,
-            char* message, size_t message_length) {
+            char* message, size_t message_length, int sender_id) {
 
     if (message_type == JOB) {
         Job_t job;
@@ -82,7 +87,9 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
         printJob(job);
         putc('\n', stdout);
         */
-        //sendJobToWd()
+        ///* to_be_inserted
+		wd_receiveJob_from_elcom(job);
+		//*/
     }
     else if (message_type == ELEVATOR_STATUS) {
         ElevatorStatus_t status;
@@ -99,7 +106,10 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
         printElevatorStatus(status);
         putc('\n', stdout);
         */
-        //sendStatusToWd()
+        //sendStatusToWd()  sender_id
+		///* to_be_inserted
+		wd_updateElevStatus(status, sender_id);
+		//*/
     }
     else if (message_type == OUTSIDE_CALLS) {
         OutsideCallsList_t list;
@@ -116,7 +126,14 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
         printOutsideCallsList(list);
         putc('\n', stdout);
         */
-        //sendCallsListToWd()
+		/* to_be_inserted
+		
+		if(from_Primary) !!! HERE TO BE MODIFIED
+		{
+        	wd_receiveCallsListFromPrimary(list);//sendCallsListToWd()
+		}
+		
+		*/
     }
     else if (message_type == INTERNAL_CALLS) {
         InternalCallsList_t calls_list;
@@ -129,7 +146,15 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
             return;
         }
         printInternalCallsList(calls_list);
-        //Send data to wd
+        
+		///* to_be_inserted
+			if(elcom_just_started == true)
+			{
+				wd_HandleInternalCallsAfterRestart(calls_list);
+				elcom_just_started = false;
+			}
+			
+		//*/
     }
     else {
         fprintf(stderr, "Unable to interpret message, discarding.\nMessage was: ");
@@ -150,7 +175,8 @@ static void* workerThread() {
 
     int sender_id;
 	
-	//HERE receive internal Calls list and ASK to deliver people stuck inside
+	elcom_just_started = true;
+	
 	
     while(true) {
         usleep(1);
@@ -167,7 +193,7 @@ static void* workerThread() {
 
             Message_type_t message_type = identify_message_type(received_msg);
 
-            deserializeMessageAndDistribute(message_type, received_msg, received_msg_length);
+            deserializeMessageAndDistribute(message_type, received_msg, received_msg_length, sender_id);
         }
     }
     return NULL;

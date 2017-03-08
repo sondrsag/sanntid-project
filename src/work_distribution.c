@@ -9,27 +9,22 @@
 void                  (*handleJob)(Job_t); // elevatorcontrol module callback
 
 static pthread_mutex_t wd_mtx;
-int local_assignee_id;  
+static int local_assignee_id;  
 
 ElevatorStatus_t All_elevators[NUM_ELEVATORS]; //is it needed to use static here or not?
 OutsideCallsList_t OutsideCallsList;
-//FloorState_t OutsideCallsList[NUM_FLOORS];
 InternalCallsList_t InternalCalls;
-//bool InternalCalls[NUM_ELEVATORS][NUM_FLOORS];
 
 
 void* wd_WorkDistributionLoop();
-//void AssignElevators(FloorState_t *OutsideCallsList,ElevatorStatus_t *All_elevators);
 void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_elevators);
 int ReturnElevatorId(ElevatorStatus_t *All_elevators, elev_motor_direction_t call_direction, int call_floor);
 void Handle_jobs_assigned();
 
 
-void work_distribution_start(HandleJobCallback_t jobCallback)
+void work_distribution_start(HandleJobCallback_t jobCallback, int IdLocalElevator)
 {
-    local_assignee_id=2; //defines own id in the assignee list, should be defined by communication module INSTEAD. make a function returning assignee_id in communication module?
-    //initialize arrays of elevator status, outsidecalls and etc so that no ellevator assigned	
-	//think of renaming, may be confusing
+    local_assignee_id = IdLocalElevator;
 
     handleJob = jobCallback;
     pthread_t WorkDistribution_thrd;
@@ -54,7 +49,6 @@ void init_global_variables()
 	pthread_mutex_unlock(&wd_mtx);
 }
 
-//void wd_receiveCallsListFromPrimary(FloorCalls_t* newOutsideCallsList)
 void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList)
 {
 	pthread_mutex_lock(&wd_mtx);
@@ -68,7 +62,6 @@ void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList)
 
 
 
-//void wd_HandleInternalCallsAfterRestart(bool** newInternalCalls)
 void wd_HandleInternalCallsAfterRestart(InternalCallsList_t newInternalCalls)
 {
 	Job_t dummy_job;
@@ -96,14 +89,18 @@ void* wd_WorkDistributionLoop() {
     
 	init_global_variables();
     sleep(10*TIME); //Wait for the start of communication module
-    // Communication module must ASK TO HANDLE JOBS for people stack in elevator after power cut or etc.
-    while(true) {
+
+	while(true) {
         sleep(TIME);
 
         AssignElevators(OutsideCallsList,All_elevators); //Cost function
-        //elcom_boadcastCallsList(calls_list) !!!! WORK ON IT LATER !
+        ///*to_be_inserted
+		elcom_broadcastOutsideCallsList(OutsideCallsList); 
+		elcom_broadcastInternalCallsList(InternalCalls);
+		//*/
 		
 		wd_receiveCallsListFromPrimary(OutsideCallsList); // JUST FOR THE MOMENT, THIS function should be called by communication module
+		
 	}
     return NULL;
 }
@@ -171,6 +168,9 @@ int ReturnElevatorId(ElevatorStatus_t *All_elevators, elev_motor_direction_t cal
 
 void wd_updateLocalElevStatus(ElevatorStatus_t new_status)
 {
+	
+	elcom_broadcastElevatorStatus(new_status);
+	
     pthread_mutex_lock(&wd_mtx);
 	All_elevators[local_assignee_id] = new_status;
 	pthread_mutex_unlock(&wd_mtx);
@@ -195,12 +195,16 @@ void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 	pthread_mutex_unlock(&wd_mtx);
 }
 
-void wd_receiveJob(Job_t job)
+void wd_receiveJob_from_local_elevator(Job_t job)
 {
 	//FIRST SEND JOB FURTHER TO COMMUNICATION MODULE!!! then work with local copy. Function from communication module should be sued here.
-	/*to_be_inserted
-	elcom_broadcastJob(job);	
-	*/
+	///*to_be_inserted
+	if(job.button==BUTTON_COMMAND) {	job.assignee = local_assignee_id;   }//internal, i.e., cabin jobs
+	
+	elcom_broadcastJob(job);
+	//*/
+	
+	
 	pthread_mutex_lock(&wd_mtx);
 	if(job.button==BUTTON_COMMAND) //internal, i.e., cabin jobs
 	{//at the moment will not function as internal commands are not sent from elevatorcontrol, but required for back up at restart of elevator after crush
@@ -243,3 +247,49 @@ void wd_receiveJob(Job_t job)
 	pthread_mutex_unlock(&wd_mtx);
 	
 }
+
+void wd_receiveJob_from_elcom(Job_t job)
+{
+	pthread_mutex_lock(&wd_mtx);
+	if(job.button==BUTTON_COMMAND) //internal, i.e., cabin jobs
+	{//at the moment will not function as internal commands are not sent from elevatorcontrol, but required for back up at restart of elevator after crush
+		if(job.finished==true)
+		{
+			InternalCalls[job.assignee][job.floor]=false; //removes call from the list
+		}
+		else
+		{
+			InternalCalls[job.assignee][job.floor]=true;
+		}
+	}
+	else // external, hall jobs
+	{
+		if(job.finished==true) //removes call from the list
+		{
+			if(job.button==BUTTON_CALL_UP)
+			{
+				OutsideCallsList[job.floor].up = false; 
+				OutsideCallsList[job.floor].el_id_up = NoneElevator_assigned;
+			}			
+			else
+			{
+				OutsideCallsList[job.floor].down = false; 
+				OutsideCallsList[job.floor].el_id_down = NoneElevator_assigned;
+			}
+		}
+		else //set jobs to be active for this floor
+		{
+			if(job.button==BUTTON_CALL_UP)
+			{
+				OutsideCallsList[job.floor].up=true; 
+			}			
+			else
+			{
+				OutsideCallsList[job.floor].down=true; 
+			}
+		}					
+	}   
+	pthread_mutex_unlock(&wd_mtx);
+	
+}
+
