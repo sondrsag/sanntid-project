@@ -153,7 +153,7 @@ static void onConnect(dyad_Event* e) {
 }
 
 static void onError(dyad_Event* e) {
-    printf("Dyad error: %s\n", e->data);
+    printf("Dyad error: %s\n", e->msg);
     exit(1);
 }
 
