@@ -1,4 +1,4 @@
-#include "control.h"
+#include "maincontrol.h"
 #include <assert.h>
 #include <pthread.h>
 #include <stdlib.h>

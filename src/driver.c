@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "unistd.h"
-#include "lib/timer.h"
+#include "timer.h"
 
 static struct {
     int buttons[N_BUTTONS][N_FLOORS];
@@ -14,8 +14,8 @@ static struct {
 static int  job_btn; // To keep track of which buttons light to switch of after current job
 static bool stopped;
 
-static ElevatorStatus_t  status;
-static pthread_mutex_t status_mtx;
+static ElevatorStatus_t status;
+static pthread_mutex_t  status_mtx;
 
 static void (*updateStatus)(ElevatorStatus_t); // elevatorcontrol module callback
 static void (*sendJob)(Job_t); // elevatorcontrol module callback
@@ -37,14 +37,14 @@ void* runDriver()
 {
     pthread_mutex_lock(&status_mtx);
 
-    elev_init(ET_Simulation);
+    elev_init();
     elev_set_motor_direction(DIRN_STOP);
 
     memset(input.buttons, 0, N_BUTTONS * N_FLOORS * sizeof(int));
     memset(input.lamps, 0, N_BUTTONS * N_FLOORS * sizeof(int));
 
     status.working       = false;
-	status.available	 = true;
+    status.available     = true;
     status.finished      = false;
     status.action        = IDLE;
     status.current_floor = elev_get_floor_sensor_signal();

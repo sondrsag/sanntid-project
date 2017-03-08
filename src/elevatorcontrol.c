@@ -1,3 +1,8 @@
+/*  TODO:
+   -  Add timeout checks. In case the elevator stops (is hold still), so it
+    technically hasn't crashed but still doesn't move.
+   -  Pass internal jobs on to maincontrol, but start the job at once. */
+
 #include "elevatorcontrol.h"
 #include <assert.h>
 #include <pthread.h>
@@ -7,10 +12,10 @@
 #include <unistd.h>
 
 #define MAX_JOBS 20
-static Job_t           jobs[MAX_JOBS];
-static unsigned int    num_jobs;    // Number of pending jobs
-static ElevatorStatus_t  status;
-static pthread_mutex_t ectr_mtx;
+static Job_t            jobs[MAX_JOBS];
+static unsigned int     num_jobs;   // Number of pending jobs
+static ElevatorStatus_t status;
+static pthread_mutex_t  ectr_mtx;
 
 void (*updateStatus)(ElevatorStatus_t);   // control module callback
 void (*sendJob)(Job_t);                 // control module callback
@@ -64,10 +69,10 @@ void* runElevatorcontrol()
                 assert(("Finished a job without any registered jobs",
                         num_jobs > 0));
                 num_jobs--;
-                num     = num_jobs;
+                num = num_jobs;
 
-		top_job.finished = true;
-		sendJob(top_job);
+                top_job.finished = true;
+                sendJob(top_job);
 
                 top_job = (num_jobs > 0) ? jobs[num_jobs - 1] : top_job;
 
@@ -90,7 +95,7 @@ void* runElevatorcontrol()
 
 void ectr_updateStatus(ElevatorStatus_t new_status)
 {
-	pthread_mutex_lock(&ectr_mtx);
+    pthread_mutex_lock(&ectr_mtx);
     status = new_status;
     pthread_mutex_unlock(&ectr_mtx);
     updateStatus(new_status);
@@ -256,7 +261,7 @@ void ectr_receiveJob(Job_t job)
 {
     if (job.button == BUTTON_COMMAND) {
         ectr_handleJob(job);
-		sendJob(job);
+        sendJob(job);
     } else {
         sendJob(job);
     }

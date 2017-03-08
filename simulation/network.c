@@ -13,6 +13,7 @@
 #include "network.h"
 #include "msg_queue.h"
 #include "utils.h"
+#include "globals.h"
 
 #define SIZE_BACKLOG NUM_ELEVATORS
 #define MAX_MSG_SIZE 1024
@@ -32,38 +33,36 @@ pthread_mutex_t stream_mutex;
 
 void msg_queue_addMessage(Msg_queue_head_t * queue, Msg_queue_node_t* node) {
     char const * message = node->message;
-    size_t       length  = node->length;
+    size_t length = node->length;
     if (length > MAX_MSG_SIZE) {
-        fprintf(stderr,
-                "Received too long message. Discarding. %d > %d\n",
-                (int)length,
-                MAX_MSG_SIZE);
+        fprintf(stderr, "Received too long message. Discarding. %d > %d\n", (int)length, MAX_MSG_SIZE);
         printf("Message is: %s\n", message);
         return;
     }
     /*
-       printf("Received message %s\n", message);
-       printf("Adding to queue\n");
-     */
+    printf("Received message %s\n", message);
+    printf("Adding to queue\n");
+    */
     pthread_mutex_lock(&msg_mutex);
     STAILQ_INSERT_TAIL(queue, node, messages);
     /*
-       printf("Messages in queue: \n");
-       STAILQ_FOREACH(en, &messages_head, entries) {
+    printf("Messages in queue: \n");
+    STAILQ_FOREACH(en, &messages_head, entries) {
         printf("%s\n", en->message);
-       }
-       printf("End messages in queue. \n");
-     */
+    }
+    printf("End messages in queue. \n");
+    */
     pthread_mutex_unlock(&msg_mutex);
 }
 
 void msg_queue_newMessage(Msg_queue_head_t * queue, char const * message, size_t const length,
-                          int const sender_id) {
+        int const sender_id) {
+    
     Msg_queue_node_t* node;
     node = malloc(sizeof(Msg_queue_node_t));
     if (node) {
         memcpy(node->message, message, length);
-        node->length    = length;
+        node->length = length;
         node->sender_id = sender_id;
     }
     else {
@@ -87,9 +86,9 @@ static void removeStreamFromList(dyad_Stream* s) {
     //Find index of stream in list
     int i;
     for (i = 0; i < num_connected_streams; ++i) {
-        if ((strcmp(dyad_getAddress(s), dyad_getAddress(stream_list[i])) == 0) &&
-            (dyad_getPort(s) == dyad_getPort(stream_list[i]))) {
-            break;
+        if ( (strcmp(dyad_getAddress(s), dyad_getAddress(stream_list[i])) == 0)
+        &&   (dyad_getPort(s) == dyad_getPort(stream_list[i])) ) {
+            break;    
         }
     }
     if (i >= num_connected_streams) {
@@ -98,15 +97,13 @@ static void removeStreamFromList(dyad_Stream* s) {
     }
     --num_connected_streams;
     //Move last stream into vacated slot
-    stream_list[i]                     = stream_list[num_connected_streams];
+    stream_list[i] = stream_list[num_connected_streams];
     stream_list[num_connected_streams] = NULL;
-} /* removeStreamFromList */
+}
 
 static void addIpToIpList(char const * ip, int id) {
-    if ((id < 0) || (id >= NUM_ELEVATORS)) {
-        fprintf(stderr,
-                "ERROR: id must be an integer in interval [0,NUM_ELEVATORS). It was: %d\n",
-                id);
+    if ( (id < 0) || ( id >= NUM_ELEVATORS)) {
+        fprintf(stderr, "ERROR: id must be an integer in interval [0,NUM_ELEVATORS). It was: %d\n", id);
         exit(1);
     }
     strcpy(elevator_ip_list[id], ip);
@@ -119,7 +116,7 @@ int ip2elId(char const * ip) {
             return i;
         }
     }
-    fprintf(stderr, "Message received from unknown address. We're being hacked. Aborting\n");
+    fprintf(stderr,"Message received from unknown address. We're being hacked. Aborting\n");
     exit(1);
     return 0;
 }
@@ -128,14 +125,14 @@ static void onData(dyad_Event* e) {
     printf("Received data from %s:%d: %s\n", dyad_getAddress(e->stream),
            dyad_getPort(e->stream), e->data);
     /*
-       printf("Received data from %s:%d:", dyad_getAddress(e->stream), dyad_getPort(e->stream));
-       int i;
-       for ( i = 0; i < e->size; ++i) {
+    printf("Received data from %s:%d:", dyad_getAddress(e->stream), dyad_getPort(e->stream));
+    int i;
+    for ( i = 0; i < e->size; ++i) {
         putc(e->data[i], stdout);
-       }
-       putc('\n',stdout);
-       printf("Message length: %d\n", e->size);
-     */
+    }
+    putc('\n',stdout);
+    printf("Message length: %d\n", e->size);
+    */
 
     //TODO: Add elevator id to message
     int id = ip2elId(dyad_getAddress(e->stream));
@@ -163,11 +160,11 @@ static void onError(dyad_Event* e) {
 
 static void onAccept(dyad_Event* e) {
     addStreamToList(e->remote);
-    printf("Accepted connection from %s:%d\n", dyad_getAddress(e->remote), dyad_getPort(e->remote));
+    printf("Accepted connection from %s:%d\n",dyad_getAddress(e->remote), dyad_getPort(e->remote));
     dyad_addListener(e->remote, DYAD_EVENT_CLOSE, onClose, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_ERROR, onError, NULL);
-}
+}  
 
 
 static void popAndBroadcast(Msg_queue_head_t * queue) {
@@ -177,7 +174,7 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
         return;
     }
     Msg_queue_node_t* node = STAILQ_FIRST(&send_messages_head);
-    int               i;
+    int i;
     for (i = 0; i < num_connected_streams; ++i) {
         dyad_write(stream_list[i], node->message, node->length);
     }
@@ -219,7 +216,7 @@ void net_init(char* ips[]) {
     //Connect to other elevators
     size_t i;
     //Increment by 2 to skip the id
-    for ( i = 2; i < 2 * NUM_ELEVATORS; i += 2) {
+    for ( i = 2; i < 2*NUM_ELEVATORS; i += 2) {
         char* hostname = ips[i];
         //Find port
         char* port_ptr = strchr(ips[i], ':');
@@ -236,20 +233,20 @@ void net_init(char* ips[]) {
         net_connect(hostname, port);
 
         //Add ip to list of ips with id
-        int id = str2int(ips[i + 1]);
+        int id = str2int(ips[i+1]);
         addIpToIpList(hostname, id);
     }
     //Listen for incoming connections
     char* my_hostname = ips[0];
-    char* port_ptr    = strchr(ips[0], ':');
-    int   my_port     = str2int(port_ptr + 1);
+    char* port_ptr = strchr(ips[0], ':');
+    int my_port = str2int(port_ptr + 1);
     *port_ptr = '\0';
 
     //Add ip to list of ips with id
     int id = str2int(ips[1]);
     addIpToIpList(my_hostname, id);
 
-    for (i = 0; i < NUM_ELEVATORS; ++i) {
+    for (i = 0; i < NUM_ELEVATORS; ++i){
         printf("%s\n", elevator_ip_list[i]);
     }
 
@@ -258,15 +255,15 @@ void net_init(char* ips[]) {
     //Start worker thread
     pthread_t thread_dyad;
     pthread_create(&thread_dyad, NULL, workerThread, NULL);
-} /* net_init */
+}
 
 
 
 static int tryConnect(dyad_Stream* s, char* hostname, int port) {
     dyad_connect(s, hostname, port);
-    clock_t connect_time = 0.5 * CLOCKS_PER_SEC; //clock cycles
-    clock_t start_time   = clock();
-    clock_t diff         = 0;
+    clock_t connect_time = 0.5*CLOCKS_PER_SEC; //clock cycles
+    clock_t start_time = clock();
+    clock_t diff = 0;
     while ( diff < connect_time) {
         //We must update manually because the dyad worker thread may not be running
         dyad_update();
@@ -322,7 +319,7 @@ int net_getMessage(char* target, size_t* received_msg_length, int* sender_id) {
     Msg_queue_node_t* node = STAILQ_FIRST(&received_messages_head);
     memcpy(target, node->message, node->length);
     *received_msg_length = node->length;
-    *sender_id           = node->sender_id;
+    *sender_id = node->sender_id;
     STAILQ_REMOVE_HEAD(&received_messages_head, messages);
     free(node);
     pthread_mutex_unlock(&msg_mutex);
@@ -331,11 +328,11 @@ int net_getMessage(char* target, size_t* received_msg_length, int* sender_id) {
 
 void net_getConnectedIps(char* ip_buf[]) {
     /*
-       int i;
-       pthread_mutex_lock(&stream_mutex);
-       for ( i = 0; i < num_connected_streams; ++i) {
+    int i;
+    pthread_mutex_lock(&stream_mutex);
+    for ( i = 0; i < num_connected_streams; ++i) {
         strcpy(ip_buf[i], dyad_getAddress(stream_list[i]));
-       }
-       pthread_mutex_unlock(&stream_mutex);
-     */
+    }
+    pthread_mutex_unlock(&stream_mutex);
+    */
 }
