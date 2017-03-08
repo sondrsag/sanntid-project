@@ -46,6 +46,13 @@ void init_global_variables()
 		OutsideCallsList[i].down       = false;
 		OutsideCallsList[i].el_id_down = NoneElevator_assigned;
 	}
+	for(int i=0; i<NUM_ELEVATORS;i++)
+	{
+		for(int j=0;j<NUM_FLOORS;j++)
+		{
+			InternalCalls[i][j] = false;
+		}
+	}	
 	pthread_mutex_unlock(&wd_mtx);
 }
 
@@ -88,7 +95,7 @@ void wd_HandleInternalCallsAfterRestart(InternalCallsList_t newInternalCalls)
 void* wd_WorkDistributionLoop() {
     
 	init_global_variables();
-    sleep(10*TIME); //Wait for the start of communication module
+    sleep(2*TIME); //Wait for the start of communication module
 
 	while(true) {
         sleep(TIME);
@@ -99,7 +106,7 @@ void* wd_WorkDistributionLoop() {
 		elcom_broadcastInternalCallsList(InternalCalls);
 		//*/
 		
-		wd_receiveCallsListFromPrimary(OutsideCallsList); // JUST FOR THE MOMENT, THIS function should be called by communication module
+		//wd_receiveCallsListFromPrimary(OutsideCallsList); // JUST FOR THE MOMENT, THIS function should be called by communication module
 		
 	}
     return NULL;
@@ -197,7 +204,6 @@ void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 
 void wd_receiveJob_from_local_elevator(Job_t job)
 {
-	//FIRST SEND JOB FURTHER TO COMMUNICATION MODULE!!! then work with local copy. Function from communication module should be sued here.
 	///*to_be_inserted
 	if(job.button==BUTTON_COMMAND) {	job.assignee = local_assignee_id;   }//internal, i.e., cabin jobs
 	

@@ -106,7 +106,7 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
         printElevatorStatus(status);
         putc('\n', stdout);
         */
-        //sendStatusToWd()  sender_id
+        
 		///* to_be_inserted
 		wd_updateElevStatus(status, sender_id);
 		//*/
@@ -126,14 +126,14 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
         printOutsideCallsList(list);
         putc('\n', stdout);
         */
-		/* to_be_inserted
+		///* to_be_inserted
 		
-		if(from_Primary) !!! HERE TO BE MODIFIED
+		if(1) //!!! HERE TO BE MODIFIED, only send if from primary
 		{
         	wd_receiveCallsListFromPrimary(list);//sendCallsListToWd()
 		}
 		
-		*/
+		//*/
     }
     else if (message_type == INTERNAL_CALLS) {
         InternalCallsList_t calls_list;
@@ -238,7 +238,7 @@ void elcom_broadcast(char* msg, size_t length) {
 }
 
 void elcom_init(char* ips_and_ports[]) {
-    net_init(ips_and_ports);
+	net_init(ips_and_ports);
 
     //Start worker thread
     pthread_t thread_elcom;
