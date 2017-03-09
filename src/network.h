@@ -10,7 +10,7 @@ void net_connect(char const * hostname, uint16_t const port);
 
 int net_getMessage(char* target, size_t* received_msg_length, int * sender_id);
 
-void net_init(char * ips_and_ports[], unsigned int const my_id);
+void net_init(unsigned int const my_id);
 
 void net_listen(char const * my_hostname, uint16_t my_port);
 

@@ -11,7 +11,7 @@ void elcom_broadcastElevatorStatus(ElevatorStatus_t status);
 
 void elcom_broadcastInternalCallsList(InternalCallsList_t calls_list);
 
-void elcom_init(char* ips_and_ports[], unsigned int const my_id);
+void elcom_init(unsigned int const my_id);
 
 void elcom_broadcast(char* msg, size_t length);
 

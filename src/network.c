@@ -236,30 +236,42 @@ void populateIpList(char * const * ips_and_ids) {
 }
 */
 
-void populateElevatorList(char * const ips_and_ids[]) {
-    for ( unsigned int i = 0; i < NUM_ELEVATORS; ++i ) {
-        unsigned int index = 2*i;
-        char ip_buf[SIZE_IP] = {0};
-        memcpy(ip_buf, ips_and_ids[index], SIZE_IP);
+void populateElevatorList(void) {
+    char buffer[1024] = {0};
+    char const * conf_file_name = "elevators.conf";
+    FILE * conf_file = fopen(conf_file_name, "r");
+    if (!conf_file) {
+        fprintf(stderr,"Could not open configuration file\n");
+        exit(1);
+    }
 
-        //Remove : after ip
-        char * port_ptr = strchr(ip_buf, ':');
-        if (port_ptr == NULL) {
-            fprintf(stderr, "Error when reading ip. should be on form ip:port\n");
+    unsigned int el_configs_read = 0;
+    while (el_configs_read < NUM_ELEVATORS) {
+        char* res = fgets(buffer, sizeof(buffer), conf_file);
+        if (!res) {
+            fprintf(stderr,"Error when reading config file. Unexpected end of file\n");
+        }
+        if (buffer[0] == '/' && buffer[1] == '/') {
+           //This line is a comment
+           continue;
+        }
+        char ip[15] = {0};
+        unsigned int port;
+        unsigned int id;
+        //Attempt to parse config file
+        int ret = sscanf(buffer, "%15[^:]:%u %u", ip, &port, &id);
+        if (ret == EOF || ret < 3) {
+            fprintf(stderr, "ERROR: Could not read config file\n");
+            fprintf(stderr, "Read %d parameters\n", ret);
+            fprintf(stderr, "ip:%s\nport:%u\nid:%u\n", ip, port, id);
             exit(1);
         }
-        *port_ptr = '\0';
-
-        //Set ID. Elevator ip and position in array is the same
-        unsigned int const id = str2int(ips_and_ids[index+1]);
         elevator_list[id].id = id;
-
-        //Set ip
-        strcpy(elevator_list[id].ip, ip_buf);
-
-        //Set port. +1 to skip inserted \0
-        elevator_list[id].port = str2int(port_ptr+1);
+        elevator_list[id].port = port;
+        strcpy(elevator_list[id].ip, ip);
+        ++el_configs_read;
     }
+    fclose(conf_file);
 }
 
 static void setMyId(unsigned int const _my_id) {
@@ -268,7 +280,7 @@ static void setMyId(unsigned int const _my_id) {
     pthread_mutex_unlock(&module_mutex);
 }
 
-void net_init(char * ips[], unsigned int const _my_id) {
+void net_init(unsigned int const _my_id) {
     //Init mutexes
     if (pthread_mutex_init(&msg_mutex, NULL) != 0)
     {
@@ -294,7 +306,7 @@ void net_init(char * ips[], unsigned int const _my_id) {
     //Set my id
     setMyId(_my_id);
     //Populate ip list with elevator ips
-    populateElevatorList(ips);
+    populateElevatorList();
     //Connect to other elevators
     for ( unsigned int i = 0; i < NUM_ELEVATORS; ++i) {
         int const id = elevator_list[i].id;
