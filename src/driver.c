@@ -8,6 +8,14 @@
 
 #define MV_TIMEOUT 400000
 
+#ifndef N_BUTTONS
+#define N_BUTTONS 3
+#endif
+
+#ifndef N_FLOORS
+#define N_FLOORS 4
+#endif
+
 static struct {
     int buttons[N_BUTTONS][N_FLOORS];
     int lamps[N_BUTTONS][N_FLOORS];

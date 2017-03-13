@@ -1,4 +1,5 @@
 #include "work_distribution.h"
+#include "elcom.h"
 #include "globals.h"
 #include <assert.h>
 #include <pthread.h>
