@@ -229,13 +229,10 @@ void elcom_broadcastElevatorStatus(ElevatorStatus_t status) {
     net_broadcast(buf, sizeof(buf));
 }
 
-int elcom_numJobsReceived(void) {
-    return 0;
-}
-
 void elcom_broadcast(char* msg, size_t length) {
     net_broadcast(msg, length);
 }
+
 
 void elcom_init(char* ips_and_ports[]) {
 	net_init(ips_and_ports);
@@ -244,19 +241,6 @@ void elcom_init(char* ips_and_ports[]) {
     pthread_t thread_elcom;
     pthread_create(&thread_elcom, NULL, workerThread, NULL);
 }
-
-
-
-/*
-elStatuses_t elcom_getElStatus(void) {
-
-}
-*/
-/*
-job_t elcom_getJob(void) {
-    
-}
-*/
 
 static int str2int(char* str) {
     int sum = 0;
