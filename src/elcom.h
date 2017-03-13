@@ -15,6 +15,8 @@ void elcom_init(unsigned int const my_id);
 
 void elcom_broadcast(char* msg, size_t length);
 
+void printOutsideCallsList(OutsideCallsList_t list);
+
 #endif //_ELCOM_H_
 
 

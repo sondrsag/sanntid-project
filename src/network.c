@@ -147,8 +147,8 @@ int ip2elId(char const * ip) {
 }
 
 static void onData(dyad_Event* e) {
-    printf("Received data from %s:%d with size %d: %s\n", dyad_getAddress(e->stream),
-           dyad_getPort(e->stream), e->size, e->data);
+    //printf("Received data from %s:%d with size %d: %s\n", dyad_getAddress(e->stream),
+    //    dyad_getPort(e->stream), e->size, e->data);
     if (e->size > MAX_MSG_SIZE) {
         printf("Received too large data. Discarding. Too lazy to handle\n");
         return;
@@ -227,7 +227,7 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
 static void* workerThread() {
     while (true) {
         popAndBroadcast(&outgoing_messages_queue);
-        usleep(100);
+        usleep(1);
         dyad_update();
         //Sleep a bit so that the process doesn't consume too much cpu time
     }

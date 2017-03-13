@@ -83,14 +83,12 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
             printMessage(message, message_length);
             return;
         }
-        /*
-        putc('\n', stdout);
-        printJob(job);
-        putc('\n', stdout);
-        */
+        //putc('\n', stdout);
+        //printJob(job);
+        //putc('\n', stdout);
         ///* to_be_inserted
-		wd_receiveJob_from_elcom(job);
-		//*/
+        wd_receiveJob_from_elcom(job);
+        //*/
     }
     else if (message_type == ELEVATOR_STATUS) {
         ElevatorStatus_t status;
@@ -102,15 +100,14 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
             printMessage(message, message_length);
             return;
         }
-        /*
-        putc('\n', stdout);
-        printElevatorStatus(status);
-        putc('\n', stdout);
-        */
         
-		///* to_be_inserted
-		wd_updateElevStatus(status, sender_id);
-		//*/
+        //putc('\n', stdout);
+        //printElevatorStatus(status);
+        //putc('\n', stdout);
+        
+        ///* to_be_inserted
+        wd_updateElevStatus(status, sender_id);
+        //*/
     }
     else if (message_type == OUTSIDE_CALLS) {
         OutsideCallsList_t list;
@@ -131,7 +128,7 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
 		
 		if(sender_id == net_getMasterId()) //!!! HERE TO BE MODIFIED, only send if from primary
 		{
-        	wd_receiveCallsListFromPrimary(list);//sendCallsListToWd()
+                    //wd_receiveCallsListFromPrimary(list);//sendCallsListToWd()
 		}
 		
 		//*/
@@ -146,7 +143,7 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
             printMessage(message, message_length);
             return;
         }
-        printInternalCallsList(calls_list);
+        //printInternalCallsList(calls_list);
         
 		///* to_be_inserted
 			if(elcom_just_started == true)
@@ -179,11 +176,12 @@ static void* workerThread() {
 	elcom_just_started = true;
 	
 	
+    sleep(2);
     while(true) {
-        usleep(1);
+        usleep(1000);
         while (net_getMessage(received_msg, &received_msg_length, &sender_id) == 0) {
-            printf("Received message from %d: ", sender_id);
-            printMessage(received_msg, received_msg_length);
+            //printf("Received message from %d: ", sender_id);
+            //printMessage(received_msg, received_msg_length);
 
             if (received_msg_length != MESSAGE_LENGTH) {
                 fprintf(stderr, ("ERROR: Received message of invalid length %zd!=%d. "
