@@ -12,7 +12,7 @@ LDFLAGS = -lcomedi -lm -lpthread
 #ELEVSRC = timer.c elev.c io.c driver.c elevatorcontrol.c work_distribution.c main.c
 ELEVSRC = timer.c elev.c io.c driver.c elevatorcontrol.c utils.c dyad.c network.c elcom.c serialize_data.c work_distribution.c main.c
 # program executable file name.
-TARGET = elevator
+TARGET = elevator.out
 
 # top-level rule, to compile everything.
 all: $(TARGET)
