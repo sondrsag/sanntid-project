@@ -209,9 +209,9 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
         pthread_mutex_unlock(&msg_mutex);
         return;
     }
-
     Msg_queue_node_t* node = STAILQ_FIRST(&outgoing_messages_queue);
-    for (unsigned int i = 0; i < num_connected_streams; ++i) {
+    for (unsigned int i = 0; i < NUM_ELEVATORS-1; ++i) {
+        printf("Broadcast\n");
         if (stream_list[i] == NULL) continue;
         dyad_write(stream_list[i], node->message, node->length);
     }
