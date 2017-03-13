@@ -25,7 +25,7 @@ void Handle_jobs_assigned();
 void work_distribution_start(HandleJobCallback_t jobCallback, int IdLocalElevator)
 {
     local_assignee_id = IdLocalElevator;
-
+		
     handleJob = jobCallback;
     pthread_t WorkDistribution_thrd;
     pthread_create(&WorkDistribution_thrd, NULL, wd_WorkDistributionLoop, NULL);
@@ -33,6 +33,7 @@ void work_distribution_start(HandleJobCallback_t jobCallback, int IdLocalElevato
 
 void init_global_variables()
 {
+	
 	pthread_mutex_lock(&wd_mtx);
 	for(int i=0;i<NUM_ELEVATORS;i++)
 	{
@@ -93,7 +94,13 @@ void wd_HandleInternalCallsAfterRestart(InternalCallsList_t newInternalCalls)
 
 
 void* wd_WorkDistributionLoop() {
-    
+    int ret = pthread_mutex_init(&wd_mtx, NULL);
+	if(ret !=0)
+	{
+		printf("Initialisation of work_distirbution_mutex failed\n");
+		return -1;
+	}
+	
 	init_global_variables();
     sleep(2*TIME); //Wait for the start of communication module
 
