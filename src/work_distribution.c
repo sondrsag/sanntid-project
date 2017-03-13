@@ -156,8 +156,6 @@ void Handle_jobs_assigned()
 //If they are not, then all jobs must be reassigned
 void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_elevators) {
     pthread_mutex_lock(&wd_mtx);
-    All_elevators[1].available = false;
-    All_elevators[2].available = false;
     for(int i_f=0; i_f<NUM_FLOORS;i_f++)
     {
         if(OutsideCallsList[i_f].up == true && OutsideCallsList[i_f].el_id_up == NoneElevator_assigned){
