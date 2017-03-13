@@ -36,7 +36,7 @@ void mutex_lock(Mutex_t * mutex) {
 }
 
 void mutex_unlock(Mutex_t * mutex) {
-    int ret = pthread_mutex_lock(mutex);
+    int ret = pthread_mutex_unlock(mutex);
     if (ret != 0) {
         perrorExit("Failed to unlock mutex\n");
     }
@@ -44,7 +44,7 @@ void mutex_unlock(Mutex_t * mutex) {
 
 void * checkMalloc(size_t size) {
     void * const ptr = malloc(size);
-    if (ptr != NULL) {
+    if (ptr == NULL) {
         perrorExit("Malloc failed\n");
     }
 
