@@ -102,21 +102,21 @@ void* wd_WorkDistributionLoop() {
 		return -1;
 	}
 	
-	init_global_variables();
-    sleep(2*TIME); //Wait for the start of communication module
+    init_global_variables();
+    sleep(2); //Wait for the start of communication module
 
 	while(true) {
-        sleep(TIME);
+        usleep(100000);
 
         AssignElevators(OutsideCallsList,All_elevators); //Cost function
         ///*to_be_inserted
-		elcom_broadcastOutsideCallsList(OutsideCallsList); 
-		elcom_broadcastInternalCallsList(InternalCalls);
-		//*/
-		sleep(TIME);
-		
-		Handle_jobs_assigned();
-		//wd_receiveCallsListFromPrimary(OutsideCallsList); // JUST FOR THE MOMENT, THIS function should be called by communication module
+        elcom_broadcastOutsideCallsList(OutsideCallsList); 
+        elcom_broadcastInternalCallsList(InternalCalls);
+        //*/
+        usleep(100000);
+        
+        Handle_jobs_assigned();
+        //wd_receiveCallsListFromPrimary(OutsideCallsList); // JUST FOR THE MOMENT, THIS function should be called by communication module
 		
 	}
     return NULL;
@@ -217,6 +217,7 @@ void wd_receiveJob_from_local_elevator(Job_t job)
 	///*to_be_inserted
 	if(job.button==BUTTON_COMMAND) {	job.assignee = local_assignee_id;   }//internal, i.e., cabin jobs
 	
+        job.assignee = NoneElevator_assigned;
 	elcom_broadcastJob(job);
 	//*/
 	
