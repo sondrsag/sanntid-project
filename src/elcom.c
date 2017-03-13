@@ -234,8 +234,8 @@ void elcom_broadcast(char* msg, size_t length) {
 }
 
 
-void elcom_init(char* ips_and_ports[]) {
-	net_init(ips_and_ports);
+void elcom_init(unsigned int const my_id) {
+    net_init(my_id);
 
     //Start worker thread
     pthread_t thread_elcom;
