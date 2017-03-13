@@ -11,15 +11,9 @@ void elcom_broadcastElevatorStatus(ElevatorStatus_t status);
 
 void elcom_broadcastInternalCallsList(InternalCallsList_t calls_list);
 
-void elcom_init(char* ips_and_ports[]);
-
-int elcom_numJobsReceived(void);
+void elcom_init(unsigned int const my_id);
 
 void elcom_broadcast(char* msg, size_t length);
-
-//elStatuses_t elcom_getElStatus();
-
-//job_t elcom_getJob(void);
 
 #endif //_ELCOM_H_
 
