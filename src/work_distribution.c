@@ -215,9 +215,10 @@ void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 void wd_receiveJob_from_local_elevator(Job_t job)
 {
 	///*to_be_inserted
-	if(job.button==BUTTON_COMMAND) {	job.assignee = local_assignee_id;   }//internal, i.e., cabin jobs
+	if(job.button==BUTTON_COMMAND) {	job.assignee = local_assignee_id;   } //internal, i.e., cabin jobs
+	else{job.assignee = NoneElevator_assigned;}
 	
-        job.assignee = NoneElevator_assigned;
+        
 	elcom_broadcastJob(job);
 	//*/
 	
