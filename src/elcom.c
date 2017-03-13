@@ -9,6 +9,7 @@
 #include "serialize_data.h"
 #include "globals.h"
 #include <stdbool.h>
+#include "work_distribution.h"
 
 //#define SIZE_OF_JOB_STRING 100
 //#define SIZE_OF_CALLSLIST_STRING 100

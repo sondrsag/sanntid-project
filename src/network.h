@@ -14,7 +14,7 @@ void net_init(unsigned int const my_id);
 
 void net_listen(char const * my_hostname, uint16_t my_port);
 
-int net_masterIp(void);
+int net_getMasterId(void);
 
 //Elcom needs to know who is connect in order to figure out who is master
 //connections_t is some list of connected nodes
