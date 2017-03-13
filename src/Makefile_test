@@ -1,0 +1,3 @@
+
+elcomtest: dyad.c network.c serialize_data.c elcom.c elcomtest.c utils.c
+	gcc -Wall -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable -O2 -pedantic -std=c11 $+ -lm -lpthread -D NUM_ELEVATORS=3 -D NUM_FLOORS=4 -o $@.exe

@@ -1,7 +1,51 @@
 
 
+//In this case all information is still exchanged between all elevators,
+//but we perform no checking of whether all elevators agree.
+//The master simply calculates a state and assigns it to other elevators.
+//We must still deal with the problem of losing master,
+//but that will be handled by elcom module
+//All elevators do this, but they simply discard states not coming from master.
+void loopNoRedundancy(void) {
+    sleep(2*TIME) //Wait for first
+    while(true) {
+        //Vi har en callback for å motta jobber fra ectr
+        sleep(TIME);
+
+        assignElevators(); //Cost function
+        elcom_boadcastCallsList(calls_list);
+
+    }
+}
 
 
+
+receiveJobsFromLocalElevatorControlCallback(job_t job) {
+//Function is called by ectr
+    validateJob(job); //Check that fields in job struct are reasonable
+    
+    broadcastJob(job); //Elcom module will broadcast to own elevator
+}
+
+localElStatusCallback(elstatus_t status) {
+    broadcastStatus(status);
+}
+
+void wd_addJobToCallsList(job_t job) {
+   
+}
+
+wd_updateElevatorStatusArray(elstatus_t statusw, int el_id) {
+    
+}
+    
+wd_updateCallsList(callsList_t list) {
+    //Send jobs to local elevator
+}
+
+wd_setElevatorUnavailable(int el_id) {
+
+}
 
 //State machine pseudo code
 //The problem here is if this happens while elevators have received different number of jobs
@@ -68,35 +112,7 @@ void loop(void) {
     }
 }
 
-//In this case all information is still exchanged between all elevators,
-//but we perform no checking of whether all elevators agree.
-//The master simply calculates a state and assigns it to other elevators.
-//We must still deal with the problem of losing master,
-//but that will be handled by elcom module
-//All elevators do this, but they simply discard states not coming from master.
-void loopNoRedundancy(void) {
-    while(true) {
-        while (localJobs()) {
-            job_t = ectr_getJob();
 
-            validateJob(job); //Check that fields in job struct are reasonable
-
-            broadcastJob(job);
-
-            addJobToList(job);
-        }
-        getNetworkJobs();
-        if (numJobs() == 0) continue; //Including local jobs
-
-        addJobsToState();
-        updateElevatorStatus();
-        assignElevators();
-        broadcastState();
-        //Send state to local elevator
-        //ectr_setState(state);
-        ectr_handleJob(job);
-    }
-}   
 
 
 
@@ -123,7 +139,7 @@ void assignElevators(void) {
     for each job in joblist {
         for each elevator {
             //First find idle elevator
-            //If no idle, find elevator in same direction
+            //If no idle, find elevator in same direction which has not reached this floor yet
             //If neither, leave job for next time
             //Else remove job from list and update state
         }

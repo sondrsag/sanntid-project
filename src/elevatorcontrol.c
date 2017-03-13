@@ -1,3 +1,9 @@
+/*
+    TODO:
+    -  Add timeout checks. In case the elevator stops (is hold still), so it
+     technically hasn't crashed but still doesn't move.
+    -  Pass internal jobs on to maincontrol, but start the job at once.
+*/
 #include "elevatorcontrol.h"
 #include <assert.h>
 #include <pthread.h>
@@ -249,6 +255,7 @@ void ectr_handleJob(Job_t job)
     if (validJob(job)) {
         size_t pos = findPosition(job);
         insertJob(job, pos);
+        drv_switchLights(job, 1);
     }
 } // ectr_handleJob
 

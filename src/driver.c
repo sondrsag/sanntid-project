@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "unistd.h"
-#include "lib/timer.h"
+#include "timer.h"
+
+#define MV_TIMEOUT 400000
 
 static struct {
     int buttons[N_BUTTONS][N_FLOORS];
@@ -14,8 +16,8 @@ static struct {
 static int  job_btn; // To keep track of which buttons light to switch of after current job
 static bool stopped;
 
-static ElevatorStatus_t  status;
-static pthread_mutex_t status_mtx;
+static ElevatorStatus_t status;
+static pthread_mutex_t  status_mtx;
 
 static void (*updateStatus)(ElevatorStatus_t); // elevatorcontrol module callback
 static void (*sendJob)(Job_t); // elevatorcontrol module callback
@@ -44,7 +46,7 @@ void* runDriver()
     memset(input.lamps, 0, N_BUTTONS * N_FLOORS * sizeof(int));
 
     status.working       = false;
-	status.available	 = true;
+    status.available     = true;
     status.finished      = false;
     status.action        = IDLE;
     status.current_floor = elev_get_floor_sensor_signal();
@@ -60,17 +62,46 @@ void* runDriver()
     }
 
     elev_set_floor_indicator(status.current_floor);
+
+    int last_floor = status.current_floor;
     pthread_mutex_unlock(&status_mtx);
 
     // Avoiding function calls during locked mtx with these variables
-    bool working;
+    bool            working;
+    bool            available;
+    int             current_floor;
+    unsigned int    timeout_counter = 0;
+    ElevatorActions action;
     while (1) {
         pthread_mutex_lock(&status_mtx);
-        working = status.working;
+        working       = status.working;
+        current_floor = status.current_floor;
+        action        = status.action;
+        available     = status.available;
         pthread_mutex_unlock(&status_mtx);
 
         if (working) evalJobProgress();
 
+        if (current_floor == last_floor && action == MOVING && available) {
+            timeout_counter++;
+
+            if (timeout_counter == MV_TIMEOUT) {
+                pthread_mutex_lock(&status_mtx);
+                status.available = false;
+                pthread_mutex_unlock(&status_mtx);
+                updateStatus(status);
+                timeout_counter = 0;
+            }
+        } else if (timeout_counter != 0) {
+            timeout_counter = 0;
+        } else if (!available && last_floor != current_floor) {
+            pthread_mutex_lock(&status_mtx);
+            status.available = true;
+            pthread_mutex_unlock(&status_mtx);
+            updateStatus(status);
+        }
+
+        last_floor = current_floor;
         checkInputs();
 
         if (elev_get_stop_signal()) {
@@ -139,6 +170,12 @@ bool drv_startJob(Job_t job)
 
     return ret;
 } // drv_startJob
+
+void drv_switchLights(Job_t job, int new_val)
+{
+    elev_set_button_lamp(job.button, job.floor, new_val);
+    input.lamps[job.button][job.floor] = new_val;
+}
 
 void evalJobProgress(void)
 {
@@ -212,8 +249,6 @@ void checkButton(elev_button_type_t button, int floor)
             updateStatus(status);
             pthread_mutex_unlock(&status_mtx);
             sendJob(new_job);
-            elev_set_button_lamp(button, floor, 1);
-            input.lamps[button][floor] = 1;
         }
     }
 } // checkButton

@@ -16,4 +16,6 @@ void drv_start(UpdateStatusCallback_t stat_callback,
 // returns false if failed to start job
 bool drv_startJob(Job_t job);
 
+void drv_switchLights(Job_t job, int new_val);
+
 #endif /* end of include guard: _DRIVER_H_ */

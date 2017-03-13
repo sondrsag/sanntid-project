@@ -14,34 +14,22 @@
 #include "msg_queue.h"
 #include "utils.h"
 #include "globals.h"
-//#include "work_distribution.h"
 
 #define SIZE_BACKLOG NUM_ELEVATORS
 #define MAX_MSG_SIZE 1024
-//Number of symbols in an IP address including dots and \0
-#define SIZE_IP 16
+//Number of symbols in an IP address including dots and
+#define SIZE_IP 15
 #define DYAD_TIMEOUT 1
-
-typedef struct elevatorInfo {
-    char ip[SIZE_IP];
-    uint16_t port;
-    unsigned int id;
-} ElevatorInfo_t;
 
 //Queues to hold incoming and outgoing messages
 static Msg_queue_head_t received_messages_head;
 static Msg_queue_head_t send_messages_head;
 
 //This list holds IP-adresses of elevators. Add 1 for \0
-//char elevator_ip_list[NUM_ELEVATORS][SIZE_IP + 1];
-static ElevatorInfo_t elevator_list[NUM_ELEVATORS];
-
+char elevator_ip_list[NUM_ELEVATORS][SIZE_IP + 1];
 
 pthread_mutex_t msg_mutex;
-pthread_mutex_t module_mutex;
 pthread_mutex_t stream_mutex;
-
-static int my_id;
 
 void msg_queue_addMessage(Msg_queue_head_t * queue, Msg_queue_node_t* node) {
     char const * message = node->message;
@@ -89,17 +77,13 @@ static unsigned int num_connected_streams;
 
 static dyad_Stream* stream_list[NUM_ELEVATORS];
 
-int ip2elId(char const * ip);
-
 static void addStreamToList(dyad_Stream* s) {
-    int id = ip2elId(dyad_getAddress(s));
-    stream_list[id] = s;
+    stream_list[num_connected_streams] = s;
     ++num_connected_streams;
 }
 
 static void removeStreamFromList(dyad_Stream* s) {
     //Find index of stream in list
-    /*
     int i;
     for (i = 0; i < num_connected_streams; ++i) {
         if ( (strcmp(dyad_getAddress(s), dyad_getAddress(stream_list[i])) == 0)
@@ -111,16 +95,10 @@ static void removeStreamFromList(dyad_Stream* s) {
         printf("Stream not found in stream_list. Exiting\n");
         exit(1);
     }
-    */
-    char const * ip = dyad_getAddress(s);
-    int id = ip2elId(ip);
-    stream_list[id] = NULL;
     --num_connected_streams;
-    /*
     //Move last stream into vacated slot
     stream_list[i] = stream_list[num_connected_streams];
     stream_list[num_connected_streams] = NULL;
-    */
 }
 
 static void addIpToIpList(char const * ip, int id) {
@@ -128,18 +106,17 @@ static void addIpToIpList(char const * ip, int id) {
         fprintf(stderr, "ERROR: id must be an integer in interval [0,NUM_ELEVATORS). It was: %d\n", id);
         exit(1);
     }
-    strcpy(elevator_list[id].ip, ip);
+    strcpy(elevator_ip_list[id], ip);
 }
 
 int ip2elId(char const * ip) {
     size_t i;
     for ( i = 0; i < NUM_ELEVATORS; ++i) {
-        if (strcmp(ip, elevator_list[i].ip) == 0) {
+        if (strcmp(ip, elevator_ip_list[i]) == 0) {
             return i;
         }
     }
-    fprintf(stderr,"Unknown address. We're being hacked. Aborting\n");
-    fprintf(stderr,"Address is: %s\n", ip);
+    fprintf(stderr,"Message received from unknown address. We're being hacked. Aborting\n");
     exit(1);
     return 0;
 }
@@ -157,17 +134,16 @@ static void onData(dyad_Event* e) {
     printf("Message length: %d\n", e->size);
     */
 
+    //TODO: Add elevator id to message
     int id = ip2elId(dyad_getAddress(e->stream));
+    printf("IP is: %s\n", dyad_getAddress(e->stream));
+    printf("Id is: %d\n", id);
     msg_queue_newMessage(&received_messages_head, e->data, e->size, id);
 
     //msg_queue_addMessage(&received_messages_head, node);
 }
 
 static void onClose(dyad_Event* e) {
-    unsigned int const id = ip2elId(dyad_getAddress(e->stream));
-    ElevatorStatus_t status = {0, 0, 0, 0, 0, IDLE, DIRN_STOP};
-    //wd_setElevatorUnavailable(id);
-    //wd_updateElevStatus(status, id);
     printf("Connection from %s:%d closed\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
     removeStreamFromList(e->stream);
 }
@@ -178,8 +154,8 @@ static void onConnect(dyad_Event* e) {
 }
 
 static void onError(dyad_Event* e) {
-    printf("Dyad error: %s\n", e->msg);
-    //exit(1);
+    printf("Dyad error: %s\n", e->data);
+    exit(1);
 }
 
 static void onAccept(dyad_Event* e) {
@@ -198,7 +174,8 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
         return;
     }
     Msg_queue_node_t* node = STAILQ_FIRST(&send_messages_head);
-    for (unsigned int i = 0; i < num_connected_streams; ++i) {
+    int i;
+    for (i = 0; i < num_connected_streams; ++i) {
         dyad_write(stream_list[i], node->message, node->length);
     }
     STAILQ_REMOVE_HEAD(queue, messages);
@@ -218,69 +195,7 @@ static void* workerThread() {
     return NULL;
 }
 
-/*
-void populateIpList(char * const * ips_and_ids) {
-    for ( unsigned int i = 0; i < NUM_ELEVATORS-1; ++i) {
-        char ip_buf[SIZE_IP] = {0};
-        memcpy(ip_buf, ips_and_ids[i], SIZE_IP);
-        //Remove : after ip if it's there
-        char * char_ptr = strchr(ip_buf, ':');
-        if (char_ptr != NULL) {
-            *char_ptr = '\0';
-        }
-        char * ip = ips_and_ids[i];
-        const int id = str2int(ips_and_ids[i+1]);
-        printf("Populating with %s as id %d\n", ip, id);
-        addIpToIpList(ip, id);
-    }
-}
-*/
-
-void populateElevatorList(void) {
-    char buffer[1024] = {0};
-    char const * conf_file_name = "network_config.conf";
-    FILE * conf_file = fopen(conf_file_name, "r");
-    if (!conf_file) {
-        fprintf(stderr,"Could not open configuration file\n");
-        exit(1);
-    }
-
-    unsigned int el_configs_read = 0;
-    while (el_configs_read < NUM_ELEVATORS) {
-        char* res = fgets(buffer, sizeof(buffer), conf_file);
-        if (!res) {
-            fprintf(stderr,"Error when reading config file. Unexpected end of file\n");
-        }
-        if (buffer[0] == '/' && buffer[1] == '/') {
-           //This line is a comment
-           continue;
-        }
-        char ip[15] = {0};
-        unsigned int port;
-        unsigned int id;
-        //Attempt to parse config file
-        int ret = sscanf(buffer, "%15[^:]:%u %u", ip, &port, &id);
-        if (ret == EOF || ret < 3) {
-            fprintf(stderr, "ERROR: Could not read config file\n");
-            fprintf(stderr, "Read %d parameters\n", ret);
-            fprintf(stderr, "ip:%s\nport:%u\nid:%u\n", ip, port, id);
-            exit(1);
-        }
-        elevator_list[id].id = id;
-        elevator_list[id].port = port;
-        strcpy(elevator_list[id].ip, ip);
-        ++el_configs_read;
-    }
-    fclose(conf_file);
-}
-
-static void setMyId(unsigned int const _my_id) {
-    pthread_mutex_lock(&module_mutex);
-    my_id = _my_id;
-    pthread_mutex_unlock(&module_mutex);
-}
-
-void net_init(unsigned int const _my_id) {
+void net_init(char* ips[]) {
     //Init mutexes
     if (pthread_mutex_init(&msg_mutex, NULL) != 0)
     {
@@ -292,35 +207,50 @@ void net_init(unsigned int const _my_id) {
         printf("\n mutex init failed\n");
         exit(1);
     }
-     if (pthread_mutex_init(&module_mutex, NULL) != 0)
-    {
-        printf("\n mutex init failed\n");
-        exit(1);
-    }
     //Init messagequeue
     STAILQ_INIT(&received_messages_head);
     STAILQ_INIT(&send_messages_head);
     //Init dyad
     dyad_init();
     dyad_setUpdateTimeout(0);
-    //Set my id
-    setMyId(_my_id);
-    //Populate ip list with elevator ips
-    populateElevatorList();
     //Connect to other elevators
-    for ( unsigned int i = 0; i < NUM_ELEVATORS; ++i) {
-        int const id = elevator_list[i].id;
-        //Skip self
-        if (id == my_id) continue;
-        char const * hostname = elevator_list[i].ip;
-        uint16_t const port = elevator_list[i].port;
+    size_t i;
+    //Increment by 2 to skip the id
+    for ( i = 2; i < 2*NUM_ELEVATORS; i += 2) {
+        char* hostname = ips[i];
+        //Find port
+        char* port_ptr = strchr(ips[i], ':');
+        if (port_ptr == NULL) {
+            //No port number specified
+            fprintf(stderr, "No port number specified. Address should be on form hostname:port\n");
+            exit(1);
+        }
+        //Replace : with \0 so that net_connect will not include port as part of hostname
+        *port_ptr = '\0';
+
+        //Add 1 to skip ':' char
+        uint16_t port = str2int(port_ptr + 1);
         net_connect(hostname, port);
+
+        //Add ip to list of ips with id
+        int id = str2int(ips[i+1]);
+        addIpToIpList(hostname, id);
     }
     //Listen for incoming connections
-    char const * my_ip = elevator_list[my_id].ip;
-    uint16_t const my_port = elevator_list[my_id].port;
+    char* my_hostname = ips[0];
+    char* port_ptr = strchr(ips[0], ':');
+    int my_port = str2int(port_ptr + 1);
+    *port_ptr = '\0';
 
-    net_listen(my_ip, my_port);
+    //Add ip to list of ips with id
+    int id = str2int(ips[1]);
+    addIpToIpList(my_hostname, id);
+
+    for (i = 0; i < NUM_ELEVATORS; ++i){
+        printf("%s\n", elevator_ip_list[i]);
+    }
+
+    net_listen(my_hostname, my_port);
 
     //Start worker thread
     pthread_t thread_dyad;
@@ -329,7 +259,7 @@ void net_init(unsigned int const _my_id) {
 
 
 
-static int tryConnect(dyad_Stream* s, char const * hostname, int const port) {
+static int tryConnect(dyad_Stream* s, char* hostname, int port) {
     dyad_connect(s, hostname, port);
     clock_t connect_time = 0.5*CLOCKS_PER_SEC; //clock cycles
     clock_t start_time = clock();
@@ -345,7 +275,7 @@ static int tryConnect(dyad_Stream* s, char const * hostname, int const port) {
     return -1;
 }
 
-void net_listen(char const * my_hostname, uint16_t my_port) {
+void net_listen(char* my_hostname, uint16_t my_port) {
     printf("Listening for connections to %s:%d ...\n", my_hostname, my_port);
     dyad_Stream* s = dyad_newStream();
     dyad_listenEx(s, my_hostname, my_port, SIZE_BACKLOG);
@@ -354,7 +284,7 @@ void net_listen(char const * my_hostname, uint16_t my_port) {
     dyad_addListener(s, DYAD_EVENT_ERROR, onError, NULL);
 }
 
-void net_connect(char const * hostname, uint16_t const port) {
+void net_connect(char* hostname, uint16_t port) {
     dyad_Stream* s = dyad_newStream();
     dyad_addListener(s, DYAD_EVENT_CONNECT, onConnect, NULL);
     dyad_addListener(s, DYAD_EVENT_ERROR, onError, NULL);
@@ -406,21 +336,3 @@ void net_getConnectedIps(char* ip_buf[]) {
     pthread_mutex_unlock(&stream_mutex);
     */
 }
-
-int net_getMasterId(void) {
-    pthread_mutex_lock(&module_mutex);
-    //Iterate over elevator connections. First available elevator is master
-    unsigned int id;
-    for ( id = 0; id < NUM_ELEVATORS; ++id ) {
-        if(stream_list[id] !=NULL) {
-            break;
-        }
-    }
-    if (id >= NUM_ELEVATORS) {
-        //I am alone -> I am master
-        id = my_id;
-    }
-    pthread_mutex_unlock(&module_mutex);
-    return id;
-}
-
