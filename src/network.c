@@ -211,7 +211,6 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
     }
     Msg_queue_node_t* node = STAILQ_FIRST(&outgoing_messages_queue);
     for (unsigned int i = 0; i < NUM_ELEVATORS-1; ++i) {
-        printf("Broadcast\n");
         if (stream_list[i] == NULL) continue;
         dyad_write(stream_list[i], node->message, node->length);
     }
