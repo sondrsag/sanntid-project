@@ -72,10 +72,10 @@ int de_serialize_ElevatorStatus_from_buffer(char* buffer, ElevatorStatus_t *S){
 	return result;
 }
 
-static int serializeFloorCallsIntoBuffer(FloorCalls_t floor_calls) {
+/*static int serializeFloorCallsIntoBuffer(FloorCalls_t floor_calls) {
 
     return 0;
-}
+}*/
 
 int serialize_OutsideCallsList_into_buffer(OutsideCallsList_t calls_list,int size_CallsList,char* buffer, int buffer_size){
 	int chksum = 0;
@@ -115,9 +115,9 @@ int de_serialize_FloorCalls_from_buffer(char const * buffer, FloorCalls_t * floo
 */
 
 int de_serialize_OutsideCallsList_from_buffer(char const * buffer, OutsideCallsList_t calls_list){
-	int chksum=0;
-	int index=0;
-        int result = 0;
+	//int chksum=0;
+	//int index=0;
+    //    int result = 0;
         char* buf_ptr = strchr(buffer, ' ') + 1;
         for ( size_t i = 0; i < NUM_FLOORS; ++i ) {
             /*
