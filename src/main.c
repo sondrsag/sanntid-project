@@ -1,28 +1,25 @@
+#include <unistd.h>
+#include "work_distribution.h"
+#include "elevatorcontrol.h"
 
-#include <stdio.h>
-
-#include "elev.h"
-
-int main()
-{
-    elev_init();
-
-    printf("Press STOP button to stop elevator and exit program.\n");
-
-    elev_set_motor_direction(DIRN_UP);
-
+int main() {
+	
+	ectr_start(&wd_updateLocalElevStatus, &wd_receiveJob);
+    work_distribution_start(&ectr_handleJob);
+	
+	//should better write a function which would use config_file
+	/* to_be_inserted
+	char * ips_and_ports[NUM_ELEVATORS];
+	ips_and_ports[0] = "address1:2015" 
+	ips_and_ports[1] = "address2:2015"
+	ips_and_ports[2] = "address3:2015"
+	
+	elcom_init(ips_and_ports)
+    */
+	
     while (1) {
-        // Change direction when we reach top/bottom floor
-        if (elev_get_floor_sensor_signal() == N_FLOORS - 1) {
-            elev_set_motor_direction(DIRN_DOWN);
-        } else if (elev_get_floor_sensor_signal() == 0) {
-            elev_set_motor_direction(DIRN_UP);
-        }
-
-        // Stop elevator and exit program if the stop button is pressed
-        if (elev_get_stop_signal()) {
-            elev_set_motor_direction(DIRN_STOP);
-            return 0;
-        }
+        usleep(1000);
     }
+
+    return 0;
 }

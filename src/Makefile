@@ -2,14 +2,15 @@
 CC = gcc
 
 # Compiler flags go here.
-CFLAGS = -std=gnu11 -g -Wall -Wextra
+CFLAGS = -std=gnu11 -g -O2 -Wall -Wextra -pedantic
 
 # Linker flags go here.
-LDFLAGS = -lcomedi -lm
+LDFLAGS = -lcomedi -lm -lpthread
 
 # list of sources
-ELEVSRC = elev.c io.c main.c
-
+#ELEVSRC = timer.c elev.c io.c driver.c elevatorcontrol.c dyad.c network.c elcom.c serialize_data.c work_distribution.c main.c
+#ELEVSRC = timer.c elev.c io.c driver.c elevatorcontrol.c work_distribution.c main.c
+ELEVSRC = timer.c elev.c io.c driver.c work_distribution.c elevatorcontrol.c dyad.c network.c elcom.c serialize_data.c utils.c main.c
 # program executable file name.
 TARGET = elevator
 
@@ -25,7 +26,7 @@ $(TARGET): $(ELEVOBJ)
 
 # Compile: create object files from C source files.
 %.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@ 
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # rule for cleaning re-compilable files.
 clean:
