@@ -1,0 +1,8 @@
+//This file should be name network_config.conf
+//This file contains the addresses and ports that all elevators in the network are listening to, as well as their ids.
+//There should be an identical copy of this file on all elevators
+//Add elevators by using this format:
+//ip:port id
+10.24.39.178:8000 0
+10.24.244.85:8000 1
+10.22.77.37:8000 2
