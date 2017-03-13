@@ -14,6 +14,7 @@
 #include "msg_queue.h"
 #include "utils.h"
 #include "globals.h"
+#include "utils.h"
 //#include "work_distribution.h"
 
 #define SIZE_BACKLOG NUM_ELEVATORS
@@ -29,8 +30,8 @@ typedef struct elevatorInfo {
 } ElevatorInfo_t;
 
 //Queues to hold incoming and outgoing messages
-static Msg_queue_head_t received_messages_head;
-static Msg_queue_head_t send_messages_head;
+static Msg_queue_head_t incoming_messages_queue;
+static Msg_queue_head_t outgoing_messages_queue;
 
 //This list holds IP-adresses of elevators. Add 1 for \0
 //char elevator_ip_list[NUM_ELEVATORS][SIZE_IP + 1];
@@ -40,6 +41,7 @@ static ElevatorInfo_t elevator_list[NUM_ELEVATORS];
 pthread_mutex_t msg_mutex;
 pthread_mutex_t module_mutex;
 pthread_mutex_t stream_mutex;
+Mutex_t * dyad_mutex;
 
 static int my_id;
 
@@ -157,8 +159,17 @@ static void onData(dyad_Event* e) {
     printf("Message length: %d\n", e->size);
     */
 
-    int id = ip2elId(dyad_getAddress(e->stream));
-    msg_queue_newMessage(&received_messages_head, e->data, e->size, id);
+    int sender_id = ip2elId(dyad_getAddress(e->stream));
+    //Allocate message and add to incoming messages queue
+    Msg_queue_node_t* node = checkMalloc(sizeof(Msg_queue_node_t));
+    memcpy(node->message, e->data, e->size);
+    node->length = e->size;
+    node->sender_id = sender_id;
+    mutex_lock(&msg_mutex);
+    STAILQ_INSERT_TAIL(&incoming_messages_queue, node, messages);
+    mutex_unlock(&msg_mutex);
+
+    //msg_queue_newMessage(&received_messages_head, e->data, e->size, id);
 
     //msg_queue_addMessage(&received_messages_head, node);
 }
@@ -192,26 +203,30 @@ static void onAccept(dyad_Event* e) {
 
 
 static void popAndBroadcast(Msg_queue_head_t * queue) {
-    pthread_mutex_lock(&msg_mutex);
+
+    mutex_lock(&msg_mutex);
     if (STAILQ_EMPTY(queue)) {
         pthread_mutex_unlock(&msg_mutex);
         return;
     }
-    Msg_queue_node_t* node = STAILQ_FIRST(&send_messages_head);
+
+    Msg_queue_node_t* node = STAILQ_FIRST(&outgoing_messages_queue);
     for (unsigned int i = 0; i < num_connected_streams; ++i) {
+        if (stream_list[i] == NULL) continue;
         dyad_write(stream_list[i], node->message, node->length);
     }
+
     STAILQ_REMOVE_HEAD(queue, messages);
-    pthread_mutex_unlock(&msg_mutex);
+    mutex_unlock(&msg_mutex);
     free(node);
 }
 
 static void* workerThread() {
     while (true) {
-        popAndBroadcast(&send_messages_head);
+        popAndBroadcast(&outgoing_messages_queue);
+        usleep(10);
         dyad_update();
         //Sleep a bit so that the process doesn't consume too much cpu time
-        usleep(1);
     }
     dyad_shutdown();
     pthread_exit(NULL);
@@ -297,9 +312,10 @@ void net_init(unsigned int const _my_id) {
         printf("\n mutex init failed\n");
         exit(1);
     }
+    dyad_mutex = mutex_make();
     //Init messagequeue
-    STAILQ_INIT(&received_messages_head);
-    STAILQ_INIT(&send_messages_head);
+    STAILQ_INIT(&incoming_messages_queue);
+    STAILQ_INIT(&outgoing_messages_queue);
     //Init dyad
     dyad_init();
     dyad_setUpdateTimeout(0);
@@ -376,22 +392,36 @@ void net_broadcast(char* data, size_t length) {
     //printf("Broadcasting...\n");
     //sender_id is set to zero because it is irrelevant in this context.
     //It will be set by receiving node
-    msg_queue_newMessage(&send_messages_head, data, length, 0);
+    //msg_queue_newMessage(&send_messages_head, data, length, 0);
     //msg_queue_addMessage(&send_messages_head, node);
+    Msg_queue_node_t* node = checkMalloc(sizeof(Msg_queue_node_t));
+    memcpy(node->message, data, length);
+    node->length = length;
+    node->sender_id = 0;
+    mutex_lock(&msg_mutex);
+    STAILQ_INSERT_TAIL(&outgoing_messages_queue, node, messages);
+    mutex_unlock(&msg_mutex);
+
 }
 
 int net_getMessage(char* target, size_t* received_msg_length, int* sender_id) {
     pthread_mutex_lock(&msg_mutex);
-    if (STAILQ_EMPTY(&received_messages_head)) {
+    if (STAILQ_EMPTY(&incoming_messages_queue)) {
         pthread_mutex_unlock(&msg_mutex);
         return -1;
     }
-    Msg_queue_node_t* node = STAILQ_FIRST(&received_messages_head);
+
+    Msg_queue_node_t* node = STAILQ_FIRST(&incoming_messages_queue);
+
+    //Copy data to caller
     memcpy(target, node->message, node->length);
     *received_msg_length = node->length;
     *sender_id = node->sender_id;
-    STAILQ_REMOVE_HEAD(&received_messages_head, messages);
+
+    //Remove node from queue
+    STAILQ_REMOVE_HEAD(&incoming_messages_queue, messages);
     free(node);
+
     pthread_mutex_unlock(&msg_mutex);
     return 0;
 }
