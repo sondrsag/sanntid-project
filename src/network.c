@@ -14,7 +14,7 @@
 #include "msg_queue.h"
 #include "utils.h"
 #include "globals.h"
-#include "work_distribution.h"
+//#include "work_distribution.h"
 
 #define SIZE_BACKLOG NUM_ELEVATORS
 #define MAX_MSG_SIZE 1024
@@ -167,7 +167,7 @@ static void onClose(dyad_Event* e) {
     unsigned int const id = ip2elId(dyad_getAddress(e->stream));
     ElevatorStatus_t status = {0, 0, 0, 0, 0, IDLE, DIRN_STOP};
     //wd_setElevatorUnavailable(id);
-    wd_updateElevStatus(status, id);
+    //wd_updateElevStatus(status, id);
     printf("Connection from %s:%d closed\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
     removeStreamFromList(e->stream);
 }
@@ -179,7 +179,7 @@ static void onConnect(dyad_Event* e) {
 
 static void onError(dyad_Event* e) {
     printf("Dyad error: %s\n", e->msg);
-    exit(1);
+    //exit(1);
 }
 
 static void onAccept(dyad_Event* e) {
@@ -238,7 +238,7 @@ void populateIpList(char * const * ips_and_ids) {
 
 void populateElevatorList(void) {
     char buffer[1024] = {0};
-    char const * conf_file_name = "elevators.conf";
+    char const * conf_file_name = "network_config.conf";
     FILE * conf_file = fopen(conf_file_name, "r");
     if (!conf_file) {
         fprintf(stderr,"Could not open configuration file\n");
