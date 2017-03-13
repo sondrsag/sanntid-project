@@ -80,7 +80,7 @@ void* runDriver()
 
         if (working) evalJobProgress();
 
-        if (current_floor == last_floor &&) {
+        if (current_floor == last_floor) {
             timeout_counter++;
 
             if (timeout_counter == MV_TIMEOUT) {
