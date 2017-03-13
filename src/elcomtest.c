@@ -11,9 +11,8 @@
 #include "network.h"
 #include "globals.h"
 #include "serialize_data.h"
+#include "utils.h"
 
-
-static int str2int(char* str);
 
 void testSerializeInternalCalls(void);
 void testDeserializeInternalCalls(char const * buffer);
@@ -50,34 +49,65 @@ void testDeserializeInternalCalls(char const * buffer) {
 
 }
 
-int main(int argc, char* argv[]) {
+void testReadConfFile(void) {
+    char buffer[1024] = {0};
+    char const * conf_file_name = "elevators.conf";
+    FILE * conf_file = fopen(conf_file_name, "r");
+    if (!conf_file) {
+        fprintf(stderr,"Could not open configuration file\n");
+        exit(1);
+    }
+    //Read config file line by line
+    while(fgets(buffer, sizeof(buffer), conf_file)) {
+        if (buffer[0] == '/' && buffer[1] == '/') {
+           //This line is a comment
+           continue;
+        }
+        char ip[15];
+        unsigned int port;
+        unsigned int id;
+        //Attempt to parse config file
+        int ret = sscanf(buffer, "%15[^:]:%u %u", ip, &port, &id);
+        if (ret == EOF || ret < 3) {
+            fprintf(stderr, "ERROR: Could not read config file\n");
+            fprintf(stderr, "Read %d parameters\n", ret);
+            fprintf(stderr, "ip:%s\nport:%u\nid:%u\n", ip, port, id);
+            exit(1);
+        }
+    }
+    fclose(conf_file);
+}
+
+int main(int const argc, char const * const * const argv) {
+    /*
     if (argc != (2*NUM_ELEVATORS + 1)) {
         printf("Invalid number of arguments. Expected %d\n", 2*NUM_ELEVATORS);
         exit(1);
     }
-    char* my_hostname = argv[1];
-    char* port_ptr = strchr(argv[1], ':') + 1;
-    int my_port = str2int(port_ptr);
-
-    char** ips_and_ports = &argv[1];
-
-    elcom_init(ips_and_ports);
+    */
+    if (argc != 2) {
+        printf("Invalid number of arguments. Expected 1\n");
+        exit(1);
+    }
+    unsigned const int my_id = strtol(argv[1], NULL, 10);
+    //testReadConfFile();
+    elcom_init(my_id);
 
     char received_msg[1024] = {0};
     size_t received_msg_length;
 
     char send_msg[1024] = {0};
 
-    Job_t test_job = {my_port - 8000, BUTTON_CALL_UP, false, 0};
+    Job_t test_job = {my_id - 8000, BUTTON_CALL_UP, false, 0};
 
-    ElevatorStatus_t status_test = {my_port-8000, 0, 0, 0, 0, IDLE, DIRN_STOP};
+    ElevatorStatus_t status_test = {my_id-8000, 0, 0, 0, 0, IDLE, DIRN_STOP};
 
     OutsideCallsList_t outside_calls_list_test;
     size_t i;
     for ( i = 0; i < NUM_FLOORS; ++i) {
         outside_calls_list_test[i].up = 0;
         outside_calls_list_test[i].down = 0;
-        outside_calls_list_test[i].el_id_up = my_port - 8000;
+        outside_calls_list_test[i].el_id_up = my_id - 8000;
         outside_calls_list_test[i].el_id_down = i;
     }
     
@@ -102,19 +132,5 @@ int main(int argc, char* argv[]) {
         sleep(2);
     }
     return 0;
-}
-
-static int str2int(char* str) {
-    int sum = 0;
-    int i = 0;
-    //First find end of string
-    while (str[i+1] != '\0') {
-        ++i;
-    }
-    int exp = 0;
-    for (; i>=0; --i) {
-        sum += (str[i] - '0' )*pow(10, exp++);
-    }
-    return sum;
 }
 
