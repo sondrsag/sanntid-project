@@ -255,6 +255,7 @@ void ectr_handleJob(Job_t job)
     if (validJob(job)) {
         size_t pos = findPosition(job);
         insertJob(job, pos);
+        drv_switchLights(job, 1);
     }
 } // ectr_handleJob
 

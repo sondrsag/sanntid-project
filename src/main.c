@@ -1,21 +1,34 @@
 #include <unistd.h>
 #include "work_distribution.h"
 #include "elevatorcontrol.h"
+#include "elcom.h"
+//#include "utils.h"
+#include <stdlib.h>
+#include <stdio.h>
 
-int main() {
+int main(int argc, char* argv[]) {
 	
-	ectr_start(&wd_updateLocalElevStatus, &wd_receiveJob);
-    work_distribution_start(&ectr_handleJob);
+	unsigned int id_of_this_elevator;
 	
-	//should better write a function which would use config_file
-	/* to_be_inserted
-	char * ips_and_ports[NUM_ELEVATORS];
-	ips_and_ports[0] = "address1:2015" 
-	ips_and_ports[1] = "address2:2015"
-	ips_and_ports[2] = "address3:2015"
+	///* to_be_inserted
+	if(argc == 2)
+	{ 
+		
+		id_of_this_elevator = atoi(argv[1]);
+		printf("elev id: %d",id_of_this_elevator);
+	}
+	else
+	{
+		printf("Elevator id in the range from 0 to %d should be given, the value shoudl correspond to the value in network_config.conf file\n",NUM_ELEVATORS);
+		return -1;
+	}
+	//*//
 	
-	elcom_init(ips_and_ports)
-    */
+	
+	ectr_start(&wd_updateLocalElevStatus, &wd_receiveJob_from_local_elevator);
+    work_distribution_start(&ectr_handleJob, id_of_this_elevator);
+			
+	elcom_init(id_of_this_elevator);
 	
     while (1) {
         usleep(1000);

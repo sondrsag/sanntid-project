@@ -68,6 +68,7 @@ void* runDriver()
 
     // Avoiding function calls during locked mtx with these variables
     bool            working;
+    bool            available;
     int             current_floor;
     unsigned int    timeout_counter = 0;
     ElevatorActions action;
@@ -76,22 +77,31 @@ void* runDriver()
         working       = status.working;
         current_floor = status.current_floor;
         action        = status.action;
+        available     = status.available;
         pthread_mutex_unlock(&status_mtx);
 
         if (working) evalJobProgress();
 
-        if (current_floor == last_floor &&) {
+        if (current_floor == last_floor && action == MOVING && available) {
             timeout_counter++;
 
             if (timeout_counter == MV_TIMEOUT) {
                 pthread_mutex_lock(&status_mtx);
                 status.available = false;
                 pthread_mutex_unlock(&status_mtx);
+                updateStatus(status);
+                timeout_counter = 0;
             }
         } else if (timeout_counter != 0) {
             timeout_counter = 0;
+        } else if (!available && last_floor != current_floor) {
+            pthread_mutex_lock(&status_mtx);
+            status.available = true;
+            pthread_mutex_unlock(&status_mtx);
+            updateStatus(status);
         }
 
+        last_floor = current_floor;
         checkInputs();
 
         if (elev_get_stop_signal()) {
@@ -160,6 +170,12 @@ bool drv_startJob(Job_t job)
 
     return ret;
 } // drv_startJob
+
+void drv_switchLights(Job_t job, int new_val)
+{
+    elev_set_button_lamp(job.button, job.floor, new_val);
+    input.lamps[job.button][job.floor] = new_val;
+}
 
 void evalJobProgress(void)
 {
@@ -233,8 +249,6 @@ void checkButton(elev_button_type_t button, int floor)
             updateStatus(status);
             pthread_mutex_unlock(&status_mtx);
             sendJob(new_job);
-            elev_set_button_lamp(button, floor, 1);
-            input.lamps[button][floor] = 1;
         }
     }
 } // checkButton
