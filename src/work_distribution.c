@@ -65,7 +65,7 @@ void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList)
 		OutsideCallsList[i]=newOutsideCallsList[i];
 	}
 	pthread_mutex_unlock(&wd_mtx);
-	Handle_jobs_assigned();
+	//Handle_jobs_assigned(); // jobs are handled in work_distributionLoop
 }
 
 
@@ -112,7 +112,9 @@ void* wd_WorkDistributionLoop() {
 		elcom_broadcastOutsideCallsList(OutsideCallsList); 
 		elcom_broadcastInternalCallsList(InternalCalls);
 		//*/
+		sleep(TIME);
 		
+		Handle_jobs_assigned();
 		//wd_receiveCallsListFromPrimary(OutsideCallsList); // JUST FOR THE MOMENT, THIS function should be called by communication module
 		
 	}

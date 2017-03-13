@@ -4,9 +4,9 @@ add call for elcom_init
 
 #FILE STRUCTURE:
 List of ip adresses:ports
-123.123.123.234:2013
-123.123.123.175:2013
-123.123.123.23:2013
+123.123.123.234:2013 0
+123.123.123.175:2013 1
+123.123.123.23:2013 2
 as a first attempt we can hardcode it
 
 ask elevatorcontrol to send elevator status periodically, define time in globals.h - it will be used to identify if elevator is dead or not, if no updates comming overcertain time, elevator is treated as dead.
