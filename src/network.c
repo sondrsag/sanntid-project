@@ -149,10 +149,12 @@ int ip2elId(char const * ip) {
 static void onData(dyad_Event* e) {
     //printf("Received data from %s:%d with size %d: %s\n", dyad_getAddress(e->stream),
     //    dyad_getPort(e->stream), e->size, e->data);
+    /*
     if (e->size > MAX_MSG_SIZE) {
         printf("Received too large data. Discarding. Too lazy to handle\n");
         return;
     }
+    */
     /*
     printf("Received data from %s:%d:", dyad_getAddress(e->stream), dyad_getPort(e->stream));
     int i;
@@ -164,14 +166,24 @@ static void onData(dyad_Event* e) {
     */
 
     int sender_id = ip2elId(dyad_getAddress(e->stream));
-    //Allocate message and add to incoming messages queue
-    Msg_queue_node_t* node = checkMalloc(sizeof(Msg_queue_node_t));
-    memcpy(node->message, e->data, e->size);
-    node->length = e->size;
-    node->sender_id = sender_id;
-    mutex_lock(&msg_mutex);
-    STAILQ_INSERT_TAIL(&incoming_messages_queue, node, messages);
-    mutex_unlock(&msg_mutex);
+
+    //Check for concatenated messages
+    unsigned int num_messages = (e->size)/MESSAGE_LENGTH;
+    //if (num_messages > 1) {
+    //    printf("Received %d concatenated messages\n", num_messages);
+    //}
+
+    for (unsigned int i = 0; i < num_messages; ++i) {
+        char* msg_ptr = e->data + i*MESSAGE_LENGTH;
+        //Allocate message and add to incoming messages queue
+        Msg_queue_node_t* node = checkMalloc(sizeof(Msg_queue_node_t));
+        memcpy(node->message, msg_ptr, MESSAGE_LENGTH);
+        node->length = MESSAGE_LENGTH;
+        node->sender_id = sender_id;
+        mutex_lock(&msg_mutex);
+        STAILQ_INSERT_TAIL(&incoming_messages_queue, node, messages);
+        mutex_unlock(&msg_mutex);
+    }
 
     //msg_queue_newMessage(&received_messages_head, e->data, e->size, id);
 

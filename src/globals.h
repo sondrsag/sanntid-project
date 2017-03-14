@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+
 typedef enum {
     DIRN_DOWN = -1,
     DIRN_STOP = 0,
@@ -54,6 +55,7 @@ typedef struct {
 #define NUM_FLOORS 4
 #define NUM_ELEVATORS 3 // added 2017.02.28, Anton
 #define TIME 0.25  //Anton new to be used in all modules for synchronisation
+#define MESSAGE_LENGTH 256
 
 typedef FloorCalls_t OutsideCallsList_t[NUM_FLOORS]; 
 //typedef InternalCall_t InternalCalls[NUM_ELEVATORS*NUM_FLOORS]
