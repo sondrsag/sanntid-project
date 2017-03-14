@@ -225,7 +225,6 @@ void wd_updateLocalElevStatus(ElevatorStatus_t new_status)
 
 void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 {
-    printf("Updated status of %d. Available: %d\n", assignee_id, new_status.available);
     pthread_mutex_lock(&wd_mtx);
     All_elevators[assignee_id] = new_status;
     if(new_status.available == false) //remove all tasks assigned to this elevator
