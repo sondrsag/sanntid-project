@@ -48,8 +48,6 @@ static void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t
 
 void Handle_jobs_assigned()
 {
-    
-
     for(int i=0;i<NUM_FLOORS;i++)
     {
         int perform_job = 0;
@@ -179,8 +177,7 @@ void* wd_WorkDistributionLoop()
 		{
 			Handle_jobs_assigned();
 		}
-        
-     
+        usleep(100000);
     }
     return NULL;
 }
