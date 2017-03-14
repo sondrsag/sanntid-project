@@ -112,7 +112,9 @@ void* wd_WorkDistributionLoop() {
         //printOutsideCallsList(OutsideCallsList);
         ///*to_be_inserted
 		elcom_broadcastElevatorStatus(All_elevators[local_assignee_id]);
+		usleep(20000);
         elcom_broadcastOutsideCallsList(OutsideCallsList); 
+		usleep(20000);
         elcom_broadcastInternalCallsList(InternalCalls);
         //*/
         usleep(100000);
