@@ -182,7 +182,7 @@ static void onClose(dyad_Event* e) {
     unsigned int const id = ip2elId(dyad_getAddress(e->stream));
     ElevatorStatus_t status = {0, 0, 0, 0, 0, IDLE, DIRN_STOP};
     //wd_setElevatorUnavailable(id);
-    //wd_updateElevStatus(status, id);
+    wd_updateElevStatus(status, id);
     printf("Connection from %s:%d closed\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
     removeStreamFromList(e->stream);
 }
@@ -190,6 +190,11 @@ static void onClose(dyad_Event* e) {
 static void onConnect(dyad_Event* e) {
     addStreamToList(e->stream);
     printf("Connected to %s:%d\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
+
+    //Let work distribution know that this elevator is available
+    unsigned int const id = ip2elId(dyad_getAddress(e->stream));
+    ElevatorStatus_t status = {0, 0, 0, 0, true, IDLE, DIRN_STOP};
+    wd_updateElevStatus(status, id);
 }
 
 static void onError(dyad_Event* e) {
@@ -203,6 +208,12 @@ static void onAccept(dyad_Event* e) {
     dyad_addListener(e->remote, DYAD_EVENT_CLOSE, onClose, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_ERROR, onError, NULL);
+
+    //Let work distribution know that this elevator is available
+    unsigned int const id = ip2elId(dyad_getAddress(e->remote));
+    ElevatorStatus_t status = {0, 0, 0, 0, true, IDLE, DIRN_STOP};
+    wd_updateElevStatus(status, id);
+
 }  
 
 
