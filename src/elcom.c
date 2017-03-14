@@ -126,9 +126,9 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
         */
 		///* to_be_inserted
 		
-		if(sender_id == net_getMasterId()) //!!! HERE TO BE MODIFIED, only send if from primary
+		if(sender_id == net_getMasterId()) 
 		{
-                    //wd_receiveCallsListFromPrimary(list);//sendCallsListToWd()
+			wd_receiveCallsListFromPrimary(list);
 		}
 		
 		//*/

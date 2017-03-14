@@ -14,7 +14,7 @@ typedef enum {
 typedef enum {
     BUTTON_CALL_UP   = 0,
     BUTTON_CALL_DOWN = 1,
-    BUTTON_COMMAND   = 2 
+    BUTTON_COMMAND   = 2 //internal calls, i.e., from cabin
 } elev_button_type_t;
 
 typedef enum {

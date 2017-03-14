@@ -10,7 +10,6 @@ int main(int argc, char* argv[]) {
 
 	unsigned int id_of_this_elevator;
 
-	///* to_be_inserted
 	if(argc == 2)
 	{
 		id_of_this_elevator = atoi(argv[1]);
@@ -18,11 +17,10 @@ int main(int argc, char* argv[]) {
 	}
 	else
 	{
-		printf("Elevator id in the range from 0 to %d should be given, the value shoudl correspond to the value in network_config.conf file\n",NUM_ELEVATORS);
+		printf("Elevator id in the range from 0 to %d should be given, the value should correspond to the value in network_config.conf file\n",NUM_ELEVATORS);
 		return -1;
 	}
-	//*//
-
+	
 
 	ectr_start(&wd_updateLocalElevStatus, &wd_receiveJob_from_local_elevator);
     work_distribution_start(&ectr_handleJob,
