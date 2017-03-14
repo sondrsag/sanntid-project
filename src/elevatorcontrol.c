@@ -243,6 +243,9 @@ bool validJob(Job_t job)
             ret         = false;
         } else if (jobs[i].floor == job.floor && jobs[i].button == job.button) {
             ret = false;
+        } else if (i == 1 && jobs[i - 1]floor == job.floor &&
+                   jobs[i - 1].button == job.button) {
+            ret = false;
         }
     }
 
