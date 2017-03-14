@@ -103,7 +103,7 @@ void* wd_WorkDistributionLoop() {
     }
 
     init_global_variables();
-    sleep(2); //Wait for the start of communication module
+    usleep(2000000); //Wait for the start of communication module
 
     while(true) {
         usleep(100000);
