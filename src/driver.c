@@ -260,6 +260,8 @@ void checkButton(elev_button_type_t button, int floor)
             updateStatus(status);
             pthread_mutex_unlock(&status_mtx);
             sendJob(new_job);
+            elev_set_button_lamp(button, floor, 1);
+            input.lamps[button][floor] = 1;
         }
     }
 } // checkButton

@@ -15,7 +15,7 @@ static int local_assignee_id;
 ElevatorStatus_t All_elevators[NUM_ELEVATORS]; //is it needed to use static here or not?
 OutsideCallsList_t OutsideCallsList;
 InternalCallsList_t InternalCalls;
-
+AlertJobFinished_t AlertJobFinished;
 
 void* wd_WorkDistributionLoop();
 void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_elevators);
@@ -23,10 +23,13 @@ int FindClosestElevator(ElevatorStatus_t *All_elevators, elev_motor_direction_t 
 void Handle_jobs_assigned();
 
 
-void work_distribution_start(HandleJobCallback_t jobCallback, int IdLocalElevator)
+void work_distribution_start(HandleJobCallback_t jobCallback,
+                             AlertJobFinished_t alertCallback,
+                             int IdLocalElevator)
 {
     local_assignee_id = IdLocalElevator;
 
+    AlertJobFinished = alertCallback;
     handleJob = jobCallback;
     pthread_t WorkDistribution_thrd;
     pthread_create(&WorkDistribution_thrd, NULL, wd_WorkDistributionLoop, NULL);
@@ -302,6 +305,7 @@ void wd_receiveJob_from_elcom(Job_t job)
         if(job.finished==true)
         {
             InternalCalls[job.assignee][job.floor]=false; //removes call from the list
+            AlertJobFinished(job);
         }
         else
         {
@@ -322,6 +326,7 @@ void wd_receiveJob_from_elcom(Job_t job)
                 OutsideCallsList[job.floor].down = false;
                 OutsideCallsList[job.floor].el_id_down = NoneElevator_assigned;
             }
+            AlertJobFinished(job);
         }
         else //set jobs to be active for this floor
         {

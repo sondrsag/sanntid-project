@@ -268,3 +268,8 @@ void ectr_receiveJob(Job_t job)
         sendJob(job);
     }
 }
+
+void ectr_updateFinishedJob(Job_t job)
+{
+    drv_switchLights(job, 0);
+}

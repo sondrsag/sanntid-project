@@ -8,7 +8,9 @@
 typedef void (*HandleJobCallback_t)(Job_t);
 typedef void (*AlertJobFinished_t)(Job_t);
 
-void work_distribution_start(HandleJobCallback_t jobCallback, int IdLocalElevator); //used by main
+void work_distribution_start(HandleJobCallback_t jobCallback,
+                             AlertJobFinished_t alertCallback,
+                             int IdLocalElevator); //used by main
 
 /* functions for local elevator module*/
 void wd_updateLocalElevStatus(ElevatorStatus_t new_status);
