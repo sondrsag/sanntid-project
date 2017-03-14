@@ -73,6 +73,7 @@ void* runDriver()
 
     int last_floor = status.current_floor;
     pthread_mutex_unlock(&status_mtx);
+    usleep(10000);
     updateStatus(status);
 
     // Avoiding function calls during locked mtx with these variables
