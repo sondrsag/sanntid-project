@@ -39,6 +39,7 @@ void init_global_variables()
     for(int i=0;i<NUM_ELEVATORS;i++)
     {
         All_elevators[i].available=false;
+		if(i == local_assignee_id){All_elevators[i].available = true;}
     }
     for(int i=0;i<NUM_FLOORS;i++)
     {
@@ -219,7 +220,8 @@ void wd_updateLocalElevStatus(ElevatorStatus_t new_status)
 
 void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 {
-    pthread_mutex_lock(&wd_mtx);
+    
+	pthread_mutex_lock(&wd_mtx);
     All_elevators[assignee_id] = new_status;
     if(new_status.available == false) //remove all tasks assigned to this elevator
     {
