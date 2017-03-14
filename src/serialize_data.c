@@ -199,7 +199,7 @@ int deserializeInternalCallsListFromBuffer(char const * buffer,
             if(buf_ptr == NULL)
 			{
 				printf("buf_ptr in deserializeInternalCallsListFromBuffer points to NULL\n");
-							   return -1;
+				return -1;
 			}
 			sscanf(buf_ptr, "%d ", (int*)&calls_list[elevator][floor]);
 			
