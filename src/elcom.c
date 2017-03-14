@@ -18,9 +18,7 @@
 
 static int str2int(char* str);
 
-///* to_be_inserted
 static bool elcom_just_started;
-//*/
 
 static void printMessage(char* message, size_t length) {
     size_t i;
@@ -83,12 +81,8 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
             printMessage(message, message_length);
             return;
         }
-        //putc('\n', stdout);
-        //printJob(job);
-        //putc('\n', stdout);
-        ///* to_be_inserted
         wd_receiveJob_from_elcom(job);
-        //*/
+        
     }
     else if (message_type == ELEVATOR_STATUS) {
         ElevatorStatus_t status;
@@ -101,13 +95,8 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
             return;
         }
         
-        //putc('\n', stdout);
-        //printElevatorStatus(status);
-        //putc('\n', stdout);
-        
-        ///* to_be_inserted
         wd_updateElevStatus(status, sender_id);
-        //*/
+        
     }
     else if (message_type == OUTSIDE_CALLS) {
         OutsideCallsList_t list;
@@ -119,19 +108,12 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
             printMessage(message, message_length);
             return;
         }
-        /*
-        putc('\n', stdout);
-        printOutsideCallsList(list);
-        putc('\n', stdout);
-        */
-		///* to_be_inserted
-		
+        
 		if(sender_id == net_getMasterId()) 
 		{
 			wd_receiveCallsListFromPrimary(list);
 		}
 		
-		//*/
     }
     else if (message_type == INTERNAL_CALLS) {
         InternalCallsList_t calls_list;
@@ -143,16 +125,12 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
             printMessage(message, message_length);
             return;
         }
-        //printInternalCallsList(calls_list);
-        
-		///* to_be_inserted
-			if(elcom_just_started == true)
-			{
-				wd_HandleInternalCallsAfterRestart(calls_list);
-				elcom_just_started = false;
-			}
+        if(elcom_just_started == true)
+		{
+			wd_HandleInternalCallsAfterRestart(calls_list);
+			elcom_just_started = false;
+		}
 			
-		//*/
     }
     else {
         fprintf(stderr, "Unable to interpret message, discarding.\nMessage was: ");
@@ -163,11 +141,11 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
 static void* workerThread() {
     char received_msg[1024];
 
-    Job_t test_job = {0, BUTTON_CALL_UP, false, 0};
+//    Job_t test_job = {0, BUTTON_CALL_UP, false, 0};
 
-    ElevatorStatus_t status_test = {0, 0, 0, 0, 0, IDLE, DIRN_STOP};
+//    ElevatorStatus_t status_test = {0, 0, 0, 0, 0, IDLE, DIRN_STOP};
 
-    int last_status_update[NUM_ELEVATORS];
+//    int last_status_update[NUM_ELEVATORS];
 
     size_t received_msg_length;
 
