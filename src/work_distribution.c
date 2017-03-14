@@ -23,6 +23,7 @@ static int FindIdleElevator(ElevatorStatus_t *All_elevators)
 {
 	for(int i_e = 0; i_e < NUM_ELEVATORS; ++i_e){   
         if(All_elevators[i_e].available && (All_elevators[i_e].action == IDLE)){
+            printf("Assigning job to elevator %d\n", i_e);
             return i_e;
         }
     }
@@ -165,17 +166,17 @@ void* wd_WorkDistributionLoop()
 
     while(true) {
         
-        AssignElevators(OutsideCallsList,All_elevators); //Cost function
         
 		elcom_broadcastElevatorStatus(All_elevators[local_assignee_id]);
-		usleep(20000);
-        elcom_broadcastOutsideCallsList(OutsideCallsList);
 		usleep(20000);
         elcom_broadcastInternalCallsList(InternalCalls);
         usleep(20000);
 		if( local_assignee_id == net_getMasterId())
 		{
+            AssignElevators(OutsideCallsList,All_elevators); //Cost function
 			Handle_jobs_assigned();
+            elcom_broadcastOutsideCallsList(OutsideCallsList);
+            usleep(20000);
 		}
         usleep(100000);
     }
@@ -228,6 +229,7 @@ void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 
 void wd_receiveJob_from_local_elevator(Job_t job)
 {
+    printf("Received job from local elevator\n");
     job.assignee = NoneElevator_assigned;
 	
     if(job.button==BUTTON_COMMAND) {
@@ -281,6 +283,7 @@ void wd_receiveJob_from_local_elevator(Job_t job)
 
 void wd_receiveJob_from_elcom(Job_t job)
 {
+    printf("Received job from network\n");
     pthread_mutex_lock(&wd_mtx);
     if(job.button==BUTTON_COMMAND) 
     {
