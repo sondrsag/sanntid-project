@@ -210,8 +210,10 @@ void wd_updateLocalElevStatus(ElevatorStatus_t new_status)
 
     pthread_mutex_lock(&wd_mtx);
     All_elevators[local_assignee_id] = new_status;
-    pthread_mutex_unlock(&wd_mtx);
-    /*
+
+	pthread_mutex_unlock(&wd_mtx);
+
+	/*
     printf("Local status\n");
     printElevatorStatus(new_status);
     putc('\n', stdout);

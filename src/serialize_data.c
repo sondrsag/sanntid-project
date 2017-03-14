@@ -46,10 +46,11 @@ int serialize_ElevatorStatus_into_buffer(ElevatorStatus_t S,char* buffer, int bu
 		+S.finished
 		+S.current_floor
 		+S.next_floor
+		+S.available
 		+S.action
 		+S.direction;
-	int result=sprintf(buffer,"elevator %d %d %d %d %d %d %d",chksum,S.working,S.finished,S.current_floor,
-		S.next_floor,S.action,S.direction);
+	int result=sprintf(buffer,"elevator %d %d %d %d %d %d %d %d",chksum,S.working,S.finished,S.current_floor,
+		S.next_floor, S.available,S.action, S.direction);
 	if(result>buffer_size){return -1;};
 	
 	return result;
@@ -57,13 +58,13 @@ int serialize_ElevatorStatus_into_buffer(ElevatorStatus_t S,char* buffer, int bu
 
 int de_serialize_ElevatorStatus_from_buffer(char* buffer, ElevatorStatus_t *S){
 	int chksum;
-	int result=sscanf(buffer,"elevator %d %d %d %d %d %d %d",
+	int result=sscanf(buffer,"elevator %d %d %d %d %d %d %d %d",
                           &chksum, (int*)&(S->working), (int*)&(S->finished), &(S->current_floor),
-		          &(S->next_floor), (int*)&(S->action), &(S->direction));
+		          &(S->next_floor), &(S->available),(int*)&(S->action), &(S->direction));
 	//printf("succesfull reads %d\n",result);
-	if(result!=7){return -1;}
+	if(result!=8){return -1;}
 	int chksum_check=S->working + S->finished + S->current_floor
-		+ S->next_floor + S->action + S->direction;
+		+ S->next_floor + S->available + S->action + S->direction;
 
 	if(chksum_check!=chksum){return -1;}
 	
