@@ -81,7 +81,8 @@ void wd_HandleInternalCallsAfterRestart(InternalCallsList_t newInternalCalls)
 
     for(int i=0; i<NUM_FLOORS; i++)
     {
-        if( newInternalCalls[local_assignee_id][i] )
+        
+		if( newInternalCalls[local_assignee_id][i] )
         {
             pthread_mutex_lock(&wd_mtx);
             InternalCalls[local_assignee_id][i] = true;
@@ -133,26 +134,47 @@ void* wd_WorkDistributionLoop() {
 
 void Handle_jobs_assigned()
 {
-    Job_t dummy_job;
+    
 
     for(int i=0;i<NUM_FLOORS;i++)
     {
-        if(OutsideCallsList[i].up==true && OutsideCallsList[i].el_id_up==local_assignee_id)
+        int perform_job = 0;
+		Job_t dummy_job;
+		
+		pthread_mutex_lock(&wd_mtx);
+		
+		if(OutsideCallsList[i].up == true && OutsideCallsList[i].el_id_up == local_assignee_id)
         {
             dummy_job.floor=i;
             dummy_job.button=BUTTON_CALL_UP;
             dummy_job.finished=false;
             dummy_job.assignee=local_assignee_id;
-            handleJob(dummy_job);
+            perform_job = 1;
         }
-        if(OutsideCallsList[i].down==true && OutsideCallsList[i].el_id_down==local_assignee_id)
+		pthread_mutex_unlock(&wd_mtx);
+		if(perform_job == 1)
+		{
+			handleJob(dummy_job);
+			perform_job = 0;
+		}
+		
+		pthread_mutex_lock(&wd_mtx);
+        if(OutsideCallsList[i].down == true && OutsideCallsList[i].el_id_down == local_assignee_id)
         {
             dummy_job.floor=i;
             dummy_job.button=BUTTON_CALL_DOWN;
             dummy_job.finished=false;
             dummy_job.assignee=local_assignee_id;
-            handleJob(dummy_job);
+            perform_job = 1;
         }
+		pthread_mutex_unlock(&wd_mtx);
+		
+		if(perform_job == 1)
+		{
+			handleJob(dummy_job);
+			perform_job = 0;
+		}
+		
     }
 }// void Handle_jobs_assigned()
 
@@ -171,7 +193,7 @@ void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_e
         if(OutsideCallsList[i_f].down == true && OutsideCallsList[i_f].el_id_down == NoneElevator_assigned){
             OutsideCallsList[i_f].el_id_down=FindClosestElevator(All_elevators, DIRN_DOWN,i_f);
         }
-    }	/*Anton: should the return be to another array of OutsideCallsList? As we plan to use only one comming from Primary elevator?ANSWER: functions fine now*/
+    }	
     pthread_mutex_unlock(&wd_mtx);
 }
 /*helper function for AssignElevators*/
@@ -244,13 +266,14 @@ void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 
 void wd_receiveJob_from_local_elevator(Job_t job)
 {
-    //internal, i.e., cabin jobs
+    job.assignee = NoneElevator_assigned;
+	//internal, i.e., cabin jobs
     if(job.button==BUTTON_COMMAND) {
         job.assignee = local_assignee_id;
     }
 
-    job.assignee = NoneElevator_assigned;
     elcom_broadcastJob(job);
+    
     //*/
 
     pthread_mutex_lock(&wd_mtx);
