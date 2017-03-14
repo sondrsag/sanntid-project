@@ -228,6 +228,12 @@ bool validJob(Job_t job)
         return ret;
     }
 
+    if (num_jobs == 1) {
+        if (jobs[0].floor == job.floor && jobs[0].button == job.button) {
+            ret = false;
+        }
+    }
+
     for (size_t i = num_jobs - 1; i > 0; i--) {
         if (jobs[i].button == BUTTON_COMMAND && job.button == BUTTON_CALL_UP &&
             jobs[i].floor == job.floor && jobs[i - 1].floor > job.floor) {
