@@ -7,12 +7,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void                  (*handleJob)(Job_t); // elevatorcontrol module callback
+void (*handleJob)(Job_t); // elevatorcontrol module callback
 
 static pthread_mutex_t wd_mtx;
 static int local_assignee_id;
 
-ElevatorStatus_t All_elevators[NUM_ELEVATORS]; //is it needed to use static here or not?
+ElevatorStatus_t All_elevators[NUM_ELEVATORS]; 
 OutsideCallsList_t OutsideCallsList;
 InternalCallsList_t InternalCalls;
 AlertJobFinished_t AlertJobFinished;
@@ -70,7 +70,6 @@ void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList)
         OutsideCallsList[i]=newOutsideCallsList[i];
     }
     pthread_mutex_unlock(&wd_mtx);
-    //Handle_jobs_assigned(); // jobs are handled in work_distributionLoop
 }
 
 
@@ -108,11 +107,10 @@ void* wd_WorkDistributionLoop() {
     }
 
     init_global_variables();
-    usleep(2000000); //Wait for the start of communication module
+    usleep(1000000); //Wait for the start of communication module
 
     while(true) {
-        usleep(100000);
-
+        
         AssignElevators(OutsideCallsList,All_elevators); //Cost function
         //printOutsideCallsList(OutsideCallsList);
         ///*to_be_inserted
@@ -122,7 +120,7 @@ void* wd_WorkDistributionLoop() {
 		usleep(20000);
         elcom_broadcastInternalCallsList(InternalCalls);
         //*/
-        usleep(100000);
+        usleep(20000);
 
         Handle_jobs_assigned();
         //wd_receiveCallsListFromPrimary(OutsideCallsList); // JUST FOR THE MOMENT, THIS function should be called by communication module
