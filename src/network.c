@@ -175,6 +175,10 @@ static void onData(dyad_Event* e) {
 
     for (unsigned int i = 0; i < num_messages; ++i) {
         char* msg_ptr = e->data + i*MESSAGE_LENGTH;
+        //Scan past null bytes
+        while (*msg_ptr == 0) {
+            ++msg_ptr;
+        }
         //Allocate message and add to incoming messages queue
         Msg_queue_node_t* node = checkMalloc(sizeof(Msg_queue_node_t));
         memcpy(node->message, msg_ptr, MESSAGE_LENGTH);
