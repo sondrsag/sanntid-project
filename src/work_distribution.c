@@ -10,7 +10,7 @@
 void                  (*handleJob)(Job_t); // elevatorcontrol module callback
 
 static pthread_mutex_t wd_mtx;
-static int local_assignee_id;  
+static int local_assignee_id;
 
 ElevatorStatus_t All_elevators[NUM_ELEVATORS]; //is it needed to use static here or not?
 OutsideCallsList_t OutsideCallsList;
@@ -55,7 +55,7 @@ void init_global_variables()
         {
             InternalCalls[i][j] = false;
         }
-    }	
+    }
     pthread_mutex_unlock(&wd_mtx);
 }
 
@@ -114,7 +114,7 @@ void* wd_WorkDistributionLoop() {
         ///*to_be_inserted
 		elcom_broadcastElevatorStatus(All_elevators[local_assignee_id]);
 		usleep(20000);
-        elcom_broadcastOutsideCallsList(OutsideCallsList); 
+        elcom_broadcastOutsideCallsList(OutsideCallsList);
 		usleep(20000);
         elcom_broadcastInternalCallsList(InternalCalls);
         //*/
@@ -134,8 +134,8 @@ void Handle_jobs_assigned()
 
     for(int i=0;i<NUM_FLOORS;i++)
     {
-        if(OutsideCallsList[i].up==true && OutsideCallsList[i].el_id_up==local_assignee_id) 
-        {	
+        if(OutsideCallsList[i].up==true && OutsideCallsList[i].el_id_up==local_assignee_id)
+        {
             dummy_job.floor=i;
             dummy_job.button=BUTTON_CALL_UP;
             dummy_job.finished=false;
@@ -150,7 +150,7 @@ void Handle_jobs_assigned()
             dummy_job.assignee=local_assignee_id;
             handleJob(dummy_job);
         }
-    }		
+    }
 }// void Handle_jobs_assigned()
 
 //This is the cost function which calculates which elevator should do what job
@@ -167,7 +167,7 @@ void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_e
         }
         if(OutsideCallsList[i_f].down == true && OutsideCallsList[i_f].el_id_down == NoneElevator_assigned){
             OutsideCallsList[i_f].el_id_down=FindClosestElevator(All_elevators, DIRN_DOWN,i_f);
-        }		
+        }
     }	/*Anton: should the return be to another array of OutsideCallsList? As we plan to use only one comming from Primary elevator?ANSWER: functions fine now*/
     pthread_mutex_unlock(&wd_mtx);
 }
@@ -187,10 +187,10 @@ int FindClosestElevator(ElevatorStatus_t *All_elevators, elev_motor_direction_t 
     }
 
     //If no idle, find elevator in same direction which has not reached this floor yet
-    for(int i_e=0;i_e<NUM_ELEVATORS;i_e++){ 
+    for(int i_e=0;i_e<NUM_ELEVATORS;i_e++){
         /*
         if( All_elevators[i_e].available == true &&
-            All_elevators[i_e].direction == call_direction && 
+            All_elevators[i_e].direction == call_direction &&
             All_elevators[i_e].direction*(call_floor-All_elevators[i_e].current_floor) >= 0 ) {
             return i_e;
         }
@@ -220,8 +220,8 @@ void wd_updateLocalElevStatus(ElevatorStatus_t new_status)
 
 void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
 {
-    
-	pthread_mutex_lock(&wd_mtx);
+    printf("Updated status of %d. Available: %d\n", assignee_id, new_status.available);
+    pthread_mutex_lock(&wd_mtx);
     All_elevators[assignee_id] = new_status;
     if(new_status.available == false) //remove all tasks assigned to this elevator
     {
@@ -232,7 +232,7 @@ void wd_updateElevStatus(ElevatorStatus_t new_status, int assignee_id)
             }
             if(OutsideCallsList[i_f].el_id_down == assignee_id){
                 OutsideCallsList[i_f].el_id_down = NoneElevator_assigned;
-            }		
+            }
         }
     }
     pthread_mutex_unlock(&wd_mtx);
@@ -267,12 +267,12 @@ void wd_receiveJob_from_local_elevator(Job_t job)
         {
             if(job.button==BUTTON_CALL_UP)
             {
-                OutsideCallsList[job.floor].up = false; 
+                OutsideCallsList[job.floor].up = false;
                 OutsideCallsList[job.floor].el_id_up = NoneElevator_assigned;
-            }			
+            }
             else
             {
-                OutsideCallsList[job.floor].down = false; 
+                OutsideCallsList[job.floor].down = false;
                 OutsideCallsList[job.floor].el_id_down = NoneElevator_assigned;
             }
         }
@@ -280,14 +280,14 @@ void wd_receiveJob_from_local_elevator(Job_t job)
         {
             if(job.button==BUTTON_CALL_UP)
             {
-                OutsideCallsList[job.floor].up=true; 
-            }			
+                OutsideCallsList[job.floor].up=true;
+            }
             else
             {
-                OutsideCallsList[job.floor].down=true; 
+                OutsideCallsList[job.floor].down=true;
             }
-        }					
-    }   
+        }
+    }
     pthread_mutex_unlock(&wd_mtx);
 
 }
@@ -312,12 +312,12 @@ void wd_receiveJob_from_elcom(Job_t job)
         {
             if(job.button==BUTTON_CALL_UP)
             {
-                OutsideCallsList[job.floor].up = false; 
+                OutsideCallsList[job.floor].up = false;
                 OutsideCallsList[job.floor].el_id_up = NoneElevator_assigned;
-            }			
+            }
             else
             {
-                OutsideCallsList[job.floor].down = false; 
+                OutsideCallsList[job.floor].down = false;
                 OutsideCallsList[job.floor].el_id_down = NoneElevator_assigned;
             }
         }
@@ -325,16 +325,15 @@ void wd_receiveJob_from_elcom(Job_t job)
         {
             if(job.button==BUTTON_CALL_UP)
             {
-                OutsideCallsList[job.floor].up=true; 
-            }			
+                OutsideCallsList[job.floor].up=true;
+            }
             else
             {
-                OutsideCallsList[job.floor].down=true; 
+                OutsideCallsList[job.floor].down=true;
             }
-        }					
-    }   
+        }
+    }
     //printOutsideCallsList(OutsideCallsList);
     pthread_mutex_unlock(&wd_mtx);
 
 }
-

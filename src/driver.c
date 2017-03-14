@@ -98,6 +98,7 @@ void* runDriver()
             if (timeout_counter == MV_TIMEOUT) {
                 pthread_mutex_lock(&status_mtx);
                 status.available = false;
+                printf("Driver detected unavailable!\n");
                 pthread_mutex_unlock(&status_mtx);
                 updateStatus(status);
                 timeout_counter = 0;
