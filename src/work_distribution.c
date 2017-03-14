@@ -19,7 +19,7 @@ InternalCallsList_t InternalCalls;
 
 void* wd_WorkDistributionLoop();
 void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_elevators);
-int ReturnElevatorId(ElevatorStatus_t *All_elevators, elev_motor_direction_t call_direction, int call_floor);
+int FindClosestElevator(ElevatorStatus_t *All_elevators, elev_motor_direction_t call_direction, int call_floor);
 void Handle_jobs_assigned();
 
 
@@ -103,7 +103,7 @@ void* wd_WorkDistributionLoop() {
     }
 
     init_global_variables();
-    sleep(2); //Wait for the start of communication module
+    usleep(2000000); //Wait for the start of communication module
 
     while(true) {
         usleep(100000);
@@ -111,7 +111,10 @@ void* wd_WorkDistributionLoop() {
         AssignElevators(OutsideCallsList,All_elevators); //Cost function
         //printOutsideCallsList(OutsideCallsList);
         ///*to_be_inserted
+		elcom_broadcastElevatorStatus(All_elevators[local_assignee_id]);
+		usleep(20000);
         elcom_broadcastOutsideCallsList(OutsideCallsList); 
+		usleep(20000);
         elcom_broadcastInternalCallsList(InternalCalls);
         //*/
         usleep(100000);
@@ -159,16 +162,16 @@ void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_e
     for(int i_f=0; i_f<NUM_FLOORS;i_f++)
     {
         if(OutsideCallsList[i_f].up == true && OutsideCallsList[i_f].el_id_up == NoneElevator_assigned){
-            OutsideCallsList[i_f].el_id_up=ReturnElevatorId(All_elevators, DIRN_UP,i_f);
+            OutsideCallsList[i_f].el_id_up=FindClosestElevator(All_elevators, DIRN_UP,i_f);
         }
         if(OutsideCallsList[i_f].down == true && OutsideCallsList[i_f].el_id_down == NoneElevator_assigned){
-            OutsideCallsList[i_f].el_id_down=ReturnElevatorId(All_elevators, DIRN_DOWN,i_f);
+            OutsideCallsList[i_f].el_id_down=FindClosestElevator(All_elevators, DIRN_DOWN,i_f);
         }		
     }	/*Anton: should the return be to another array of OutsideCallsList? As we plan to use only one comming from Primary elevator?ANSWER: functions fine now*/
     pthread_mutex_unlock(&wd_mtx);
 }
 /*helper function for AssignElevators*/
-int ReturnElevatorId(ElevatorStatus_t *All_elevators, elev_motor_direction_t call_direction, int call_floor)
+int FindClosestElevator(ElevatorStatus_t *All_elevators, elev_motor_direction_t call_direction, int call_floor)
 {
     /*
     printf("This elevator status\n");
