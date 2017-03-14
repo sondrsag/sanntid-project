@@ -196,7 +196,13 @@ int deserializeInternalCallsListFromBuffer(char const * buffer,
     char* buf_ptr = strchr(buffer, ' ') + 1;
     for(size_t elevator = 0; elevator < NUM_ELEVATORS; ++elevator) {
         for (size_t floor = 0; floor < NUM_FLOORS; ++floor) {
-            sscanf(buf_ptr, "%d ", (int*)&calls_list[elevator][floor]);
+            if(buf_ptr == NULL)
+			{
+				printf("buf_ptr in deserializeInternalCallsListFromBuffer points to NULL\n");
+							   return -1;
+			}
+			sscanf(buf_ptr, "%d ", (int*)&calls_list[elevator][floor]);
+			
             buf_ptr = strchr(buf_ptr, ' ') + 1;
         }
     }
