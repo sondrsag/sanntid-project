@@ -8,27 +8,17 @@
 
 #define MV_TIMEOUT 400000
 
-#ifndef N_BUTTONS
-#define N_BUTTONS 3
-#endif
-
-#ifndef N_FLOORS
-#define N_FLOORS 4
-#endif
-
 static struct {
     int buttons[N_BUTTONS][N_FLOORS];
     int lamps[N_BUTTONS][N_FLOORS];
 } input;
 
-static int  job_btn; // To keep track of which buttons light to switch of after current job
-static bool stopped;
-
+// To keep track of which button light to switch of after current job
+static int              job_btn;
 static ElevatorStatus_t status;
 static pthread_mutex_t  status_mtx;
-
-static void (*updateStatus)(ElevatorStatus_t); // elevatorcontrol module callback
-static void (*sendJob)(Job_t); // elevatorcontrol module callback
+static void             (*updateStatus)(ElevatorStatus_t);
+static void             (*sendJob)(Job_t);
 
 void  evalJobProgress(void);
 void  checkInputs(void);
@@ -45,10 +35,17 @@ void drv_start(UpdateStatusCallback_t stat_callback, SendJobCallback_t job_callb
 
 void* runDriver()
 {
-    pthread_mutex_lock(&status_mtx);
+    /***************************************************************************
 
+
+        Initialize elevator and setup module variable
+
+
+    ***************************************************************************/
     elev_init(ET_Simulation);
     elev_set_motor_direction(DIRN_STOP);
+
+    pthread_mutex_lock(&status_mtx);
 
     memset(input.buttons, 0, N_BUTTONS * N_FLOORS * sizeof(int));
     memset(input.lamps, 0, N_BUTTONS * N_FLOORS * sizeof(int));
@@ -62,6 +59,7 @@ void* runDriver()
     status.direction     = 0;
 
     if (status.current_floor == -1) {
+        // Move to floor below if elevator startet in between floors
         elev_set_motor_direction(DIRN_DOWN);
         while (status.current_floor == -1) {
             status.current_floor = elev_get_floor_sensor_signal();
@@ -70,19 +68,26 @@ void* runDriver()
     }
 
     elev_set_floor_indicator(status.current_floor);
-
     int last_floor = status.current_floor;
     pthread_mutex_unlock(&status_mtx);
     usleep(10000);
     updateStatus(status);
 
-    // Avoiding function calls during locked mtx with these variables
     bool            working;
     bool            available;
     int             current_floor;
     unsigned int    timeout_counter = 0;
     ElevatorActions action;
     while (1) {
+        /***********************************************************************
+
+
+            Driver threads main loop:
+            Check progress of current job, check for a physical error and check
+            if any button is pressed. 
+
+
+        ***********************************************************************/
         pthread_mutex_lock(&status_mtx);
         working       = status.working;
         current_floor = status.current_floor;
@@ -134,11 +139,6 @@ bool drv_startJob(Job_t job)
             job.floor >= 0 && job.floor < N_FLOORS));
 
     pthread_mutex_lock(&status_mtx);
-
-    if (stopped) {
-        pthread_mutex_unlock(&status_mtx);
-        return false;
-    }
 
     bool ret = false;
 
