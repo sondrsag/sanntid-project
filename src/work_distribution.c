@@ -18,8 +18,6 @@ OutsideCallsList_t OutsideCallsList;
 InternalCallsList_t InternalCalls;
 AlertJobFinished_t AlertJobFinished;
 
-void* wd_WorkDistributionLoop();
-
 /*helper function for AssignElevators*/
 static int FindIdleElevator(ElevatorStatus_t *All_elevators)
 {
@@ -33,7 +31,8 @@ static int FindIdleElevator(ElevatorStatus_t *All_elevators)
 }
 
 //This is the cost function which calculates which elevator should do each job
-static void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_elevators) {
+static void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t *All_elevators) 
+{
     pthread_mutex_lock(&wd_mtx);
     for(int i_f=0; i_f<NUM_FLOORS;i_f++)
     {
@@ -46,117 +45,6 @@ static void AssignElevators(OutsideCallsList_t OutsideCallsList,ElevatorStatus_t
     }	
     pthread_mutex_unlock(&wd_mtx);
 }
-
-
-void Handle_jobs_assigned();
-
-
-void work_distribution_start(HandleJobCallback_t jobCallback,
-                             AlertJobFinished_t alertCallback,
-                             int IdLocalElevator)
-{
-    local_assignee_id = IdLocalElevator;
-
-    AlertJobFinished = alertCallback;
-    handleJob = jobCallback;
-    pthread_t WorkDistribution_thrd;
-    pthread_create(&WorkDistribution_thrd, NULL, wd_WorkDistributionLoop, NULL);
-}
-
-static void init_global_variables()
-{
-
-    pthread_mutex_lock(&wd_mtx);
-    for(int i=0;i<NUM_ELEVATORS;i++)
-    {
-        All_elevators[i].available=false;
-		if(i == local_assignee_id){All_elevators[i].available = true;}
-    }
-    for(int i=0;i<NUM_FLOORS;i++)
-    {
-        OutsideCallsList[i].up         = false;
-
-        OutsideCallsList[i].el_id_up   = NoneElevator_assigned;
-        OutsideCallsList[i].down       = false;
-        OutsideCallsList[i].el_id_down = NoneElevator_assigned;
-    }
-    for(int i=0; i<NUM_ELEVATORS;i++)
-    {
-        for(int j=0;j<NUM_FLOORS;j++)
-        {
-            InternalCalls[i][j] = false;
-        }
-    }
-    pthread_mutex_unlock(&wd_mtx);
-}
-
-void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList)
-{
-    pthread_mutex_lock(&wd_mtx);
-    for(int i=0;i<NUM_FLOORS;i++)
-    {
-        OutsideCallsList[i]=newOutsideCallsList[i];
-    }
-    pthread_mutex_unlock(&wd_mtx);
-	Handle_jobs_assigned();
-}
-
-
-void wd_HandleInternalCallsAfterRestart(InternalCallsList_t newInternalCalls)
-{
-    Job_t dummy_job;
-
-    for(int i=0; i<NUM_FLOORS; i++)
-    {
-        
-		if( newInternalCalls[local_assignee_id][i] )
-        {
-            pthread_mutex_lock(&wd_mtx);
-            InternalCalls[local_assignee_id][i] = true;
-            pthread_mutex_unlock(&wd_mtx);
-
-            dummy_job.floor=i;
-            dummy_job.button=BUTTON_COMMAND;
-            dummy_job.finished=false;
-            dummy_job.assignee=local_assignee_id;
-
-            handleJob(dummy_job);
-        }
-    }
-}
-
-
-void* wd_WorkDistributionLoop() {
-    int ret = pthread_mutex_init(&wd_mtx, NULL);
-    if(ret !=0)
-    {
-        printf("Initialisation of work_distirbution_mutex failed\n");
-        return NULL;
-    }
-
-    init_global_variables();
-    usleep(1000000); //Wait for the start of communication module
-
-    while(true) {
-        
-        AssignElevators(OutsideCallsList,All_elevators); //Cost function
-        
-		elcom_broadcastElevatorStatus(All_elevators[local_assignee_id]);
-		usleep(20000);
-        elcom_broadcastOutsideCallsList(OutsideCallsList);
-		usleep(20000);
-        elcom_broadcastInternalCallsList(InternalCalls);
-        usleep(20000);
-		if( local_assignee_id == net_getMasterId())
-		{
-			Handle_jobs_assigned();
-		}
-        
-     
-    }
-    return NULL;
-}
-
 
 void Handle_jobs_assigned()
 {
@@ -202,6 +90,111 @@ void Handle_jobs_assigned()
 		}
 		
     }
+}
+
+static void init_global_variables()
+{
+
+    pthread_mutex_lock(&wd_mtx);
+    for(int i=0;i<NUM_ELEVATORS;i++)
+    {
+        All_elevators[i].available=false;
+		if(i == local_assignee_id){All_elevators[i].available = true;}
+    }
+    for(int i=0;i<NUM_FLOORS;i++)
+    {
+        OutsideCallsList[i].up         = false;
+
+        OutsideCallsList[i].el_id_up   = NoneElevator_assigned;
+        OutsideCallsList[i].down       = false;
+        OutsideCallsList[i].el_id_down = NoneElevator_assigned;
+    }
+    for(int i=0; i<NUM_ELEVATORS;i++)
+    {
+        for(int j=0;j<NUM_FLOORS;j++)
+        {
+            InternalCalls[i][j] = false;
+        }
+    }
+    pthread_mutex_unlock(&wd_mtx);
+}
+
+void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList)
+{
+    pthread_mutex_lock(&wd_mtx);
+    for(int i=0;i<NUM_FLOORS;i++)
+    {
+        OutsideCallsList[i]=newOutsideCallsList[i];
+    }
+    pthread_mutex_unlock(&wd_mtx);
+	Handle_jobs_assigned();
+}
+
+void wd_HandleInternalCallsAfterRestart(InternalCallsList_t newInternalCalls)
+{
+    Job_t dummy_job;
+
+    for(int i=0; i<NUM_FLOORS; i++)
+    {
+        
+		if( newInternalCalls[local_assignee_id][i] )
+        {
+            pthread_mutex_lock(&wd_mtx);
+            InternalCalls[local_assignee_id][i] = true;
+            pthread_mutex_unlock(&wd_mtx);
+
+            dummy_job.floor=i;
+            dummy_job.button=BUTTON_COMMAND;
+            dummy_job.finished=false;
+            dummy_job.assignee=local_assignee_id;
+
+            handleJob(dummy_job);
+        }
+    }
+}
+
+void* wd_WorkDistributionLoop() 
+{
+    int ret = pthread_mutex_init(&wd_mtx, NULL);
+    if(ret !=0)
+    {
+        printf("Initialisation of work_distirbution_mutex failed\n");
+        return NULL;
+    }
+
+    init_global_variables();
+    usleep(1000000); //Wait for the start of communication module
+
+    while(true) {
+        
+        AssignElevators(OutsideCallsList,All_elevators); //Cost function
+        
+		elcom_broadcastElevatorStatus(All_elevators[local_assignee_id]);
+		usleep(20000);
+        elcom_broadcastOutsideCallsList(OutsideCallsList);
+		usleep(20000);
+        elcom_broadcastInternalCallsList(InternalCalls);
+        usleep(20000);
+		if( local_assignee_id == net_getMasterId())
+		{
+			Handle_jobs_assigned();
+		}
+        
+     
+    }
+    return NULL;
+}
+
+void work_distribution_start(HandleJobCallback_t jobCallback,
+                             AlertJobFinished_t alertCallback,
+                             int IdLocalElevator)
+{
+    local_assignee_id = IdLocalElevator;
+
+    AlertJobFinished = alertCallback;
+    handleJob = jobCallback;
+    pthread_t WorkDistribution_thrd;
+    pthread_create(&WorkDistribution_thrd, NULL, wd_WorkDistributionLoop, NULL);
 }
 
 void wd_updateLocalElevStatus(ElevatorStatus_t new_status)
