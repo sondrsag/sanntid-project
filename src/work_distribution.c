@@ -1,4 +1,5 @@
 #include "work_distribution.h"
+#include "network.h"
 #include "elcom.h"
 #include "globals.h"
 #include <assert.h>
@@ -98,6 +99,7 @@ void wd_receiveCallsListFromPrimary(OutsideCallsList_t newOutsideCallsList)
         OutsideCallsList[i]=newOutsideCallsList[i];
     }
     pthread_mutex_unlock(&wd_mtx);
+	Handle_jobs_assigned();
 }
 
 
@@ -146,8 +148,11 @@ void* wd_WorkDistributionLoop() {
 		usleep(20000);
         elcom_broadcastInternalCallsList(InternalCalls);
         usleep(20000);
-
-        Handle_jobs_assigned();
+		if( local_assignee_id == net_getMasterId())
+		{
+			Handle_jobs_assigned();
+		}
+        
      
     }
     return NULL;
