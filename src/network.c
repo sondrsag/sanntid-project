@@ -475,13 +475,12 @@ int net_getMasterId(void) {
     //Iterate over elevator connections. First available elevator is master
     unsigned int id;
     for ( id = 0; id < NUM_ELEVATORS; ++id ) {
+        if(id == my_id) {
+            break;
+        }
         if(stream_list[id] !=NULL) {
             break;
         }
-    }
-    if (id >= NUM_ELEVATORS) {
-        //I am alone -> I am master
-        id = my_id;
     }
     pthread_mutex_unlock(&module_mutex);
     return id;

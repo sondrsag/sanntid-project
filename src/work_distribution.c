@@ -171,8 +171,10 @@ void* wd_WorkDistributionLoop()
 		usleep(20000);
         elcom_broadcastInternalCallsList(InternalCalls);
         usleep(20000);
-		if( local_assignee_id == net_getMasterId())
+        int master_id = net_getMasterId();
+		if( local_assignee_id == master_id)
 		{
+            printf("I am master\n");
             AssignElevators(OutsideCallsList,All_elevators); //Cost function
 			Handle_jobs_assigned();
             elcom_broadcastOutsideCallsList(OutsideCallsList);
