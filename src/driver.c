@@ -84,7 +84,7 @@ void* runDriver()
 
             Driver threads main loop:
             Check progress of current job, check for a physical error and check
-            if any button is pressed. 
+            if any button is pressed.
 
 
         ***********************************************************************/
@@ -103,7 +103,6 @@ void* runDriver()
             if (timeout_counter == MV_TIMEOUT) {
                 pthread_mutex_lock(&status_mtx);
                 status.available = false;
-                printf("Driver detected unavailable!\n");
                 pthread_mutex_unlock(&status_mtx);
                 updateStatus(status);
                 timeout_counter = 0;
@@ -135,13 +134,18 @@ void* runDriver()
 
 bool drv_startJob(Job_t job)
 {
-    assert(("Starting job with floor out of bounds",
-            job.floor >= 0 && job.floor < N_FLOORS));
-
+    assert(job.floor >= 0 && job.floor < N_FLOORS);
     pthread_mutex_lock(&status_mtx);
-
     bool ret = false;
 
+    /***************************************************************************
+
+
+        Determine in which direction to move or if the doors should be opened,
+        and send status update to elevatorcontrol
+
+
+    ***************************************************************************/
     if (job.floor > status.current_floor) {
         elev_set_motor_direction(DIRN_UP);
         status.working    = true;
@@ -227,6 +231,7 @@ void evalJobProgress(void)
     case OPEN:
         if (timer_timedOut()) {
             elev_set_door_open_lamp(0);
+            elev_set_button_lamp(job_btn, status.current_floor, 0);
             status.working  = false;
             status.finished = true;
             status.action   = IDLE;
