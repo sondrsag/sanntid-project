@@ -23,7 +23,6 @@ static int FindIdleElevator(ElevatorStatus_t *All_elevators)
 {
 	for(int i_e = 0; i_e < NUM_ELEVATORS; ++i_e){   
         if(All_elevators[i_e].available && (All_elevators[i_e].action == IDLE)){
-            printf("Assigning job to elevator %d\n", i_e);
             return i_e;
         }
     }
