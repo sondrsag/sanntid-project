@@ -22,6 +22,7 @@
 //Number of symbols in an IP address including dots and \0
 #define SIZE_IP 16
 #define DYAD_TIMEOUT 1
+#define STREAM_TIMEOUT 0.5
 
 typedef struct elevatorInfo {
     char ip[SIZE_IP];
@@ -206,6 +207,7 @@ static void onClose(dyad_Event* e) {
 static void onConnect(dyad_Event* e) {
     addStreamToList(e->stream);
     printf("Connected to %s:%d\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
+    dyad_setTimeout(e->stream, STREAM_TIMEOUT);
 
     //Let work distribution know that this elevator is available
     unsigned int const id = ip2elId(dyad_getAddress(e->stream));
@@ -224,6 +226,7 @@ static void onAccept(dyad_Event* e) {
     dyad_addListener(e->remote, DYAD_EVENT_CLOSE, onClose, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_ERROR, onError, NULL);
+    dyad_setTimeout(e->remote, STREAM_TIMEOUT);
 
     //Let work distribution know that this elevator is available
     unsigned int const id = ip2elId(dyad_getAddress(e->remote));
