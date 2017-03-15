@@ -16,8 +16,6 @@
 //#define SIZE_OF_ELEVATORSTATUS_STRING 100
 #define MESSAGE_LENGTH 64*NUM_FLOORS
 
-static int str2int(char* str);
-
 static bool elcom_just_started;
 
 static void printMessage(char* message, size_t length) {
@@ -218,19 +216,4 @@ void elcom_init(unsigned int const my_id) {
     pthread_t thread_elcom;
     pthread_create(&thread_elcom, NULL, workerThread, NULL);
 }
-
-static int str2int(char* str) {
-    int sum = 0;
-    int i = 0;
-    //First find end of string
-    while (str[i+1] != '\0') {
-        ++i;
-    }
-    int exp = 0;
-    for (; i>=0; --i) {
-        sum += (str[i] - '0' )*pow(10, exp++);
-    }
-    return sum;
-}
-
 
