@@ -22,12 +22,14 @@
 //Number of symbols in an IP address including dots and \0
 #define SIZE_IP 16
 #define DYAD_TIMEOUT 1
-#define STREAM_TIMEOUT 0.5
+
+double STREAM_TIMEOUT = 0.5;
 
 typedef struct elevatorInfo {
     char ip[SIZE_IP];
     uint16_t port;
     unsigned int id;
+    bool connected;
 } ElevatorInfo_t;
 
 //Queues to hold incoming and outgoing messages
@@ -95,6 +97,7 @@ static dyad_Stream* stream_list[NUM_ELEVATORS];
 int ip2elId(char const * ip);
 
 static void addStreamToList(dyad_Stream* s) {
+    dyad_setTimeout(s, STREAM_TIMEOUT);
     int id = ip2elId(dyad_getAddress(s));
     stream_list[id] = s;
     ++num_connected_streams;
@@ -115,8 +118,13 @@ static void removeStreamFromList(dyad_Stream* s) {
         exit(1);
     }
     */
+
     char const * ip = dyad_getAddress(s);
     int id = ip2elId(ip);
+    if (id == -1) {
+        return;
+    }
+    printf("Removing stream with ip %s and id %d from list\n", ip, id);
     stream_list[id] = NULL;
     --num_connected_streams;
     /*
@@ -141,10 +149,13 @@ int ip2elId(char const * ip) {
             return i;
         }
     }
+    if (strcmp(ip, "0.0.0.0") == 0) {
+        return -1;
+    }
     fprintf(stderr,"Unknown address. We're being hacked. Aborting\n");
     fprintf(stderr,"Address is: %s\n", ip);
-    exit(1);
-    return 0;
+    //exit(1);
+    return -1;
 }
 
 static void onData(dyad_Event* e) {
@@ -165,8 +176,10 @@ static void onData(dyad_Event* e) {
     putc('\n',stdout);
     printf("Message length: %d\n", e->size);
     */
-
     int sender_id = ip2elId(dyad_getAddress(e->stream));
+    if (sender_id == -1) {
+        return;
+    }
 
     //Check for concatenated messages
     unsigned int num_messages = (e->size)/MESSAGE_LENGTH;
@@ -197,28 +210,40 @@ static void onData(dyad_Event* e) {
 
 static void onClose(dyad_Event* e) {
     unsigned int const id = ip2elId(dyad_getAddress(e->stream));
+    if (id == -1) {
+        return;
+    }
+    printf("Connection from %s:%d closed\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
     ElevatorStatus_t status = {0, 0, 0, 0, 0, IDLE, DIRN_STOP};
     //wd_setElevatorUnavailable(id);
     wd_updateElevStatus(status, id);
-    printf("Connection from %s:%d closed\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
     removeStreamFromList(e->stream);
+    //printf("Attempting to reconnect to %s:%d\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
+    //usleep(100000);
+    //dyad_connect(e->stream, dyad_getAddress(e->stream), dyad_getPort(e->stream));
+}
+
+static void onError(dyad_Event* e) {
+    printf("Dyad error from stream with ip %s: %s\n", dyad_getAddress(e->stream), e->msg);
+    //dyad_connect(e->stream, dyad_getAddress(e->stream), dyad_getPort(e->stream));
+    //exit(1);
 }
 
 static void onConnect(dyad_Event* e) {
+    dyad_addListener(e->stream, DYAD_EVENT_DATA, onData, NULL);
+    dyad_addListener(e->stream, DYAD_EVENT_ERROR, onError, NULL);
     addStreamToList(e->stream);
     printf("Connected to %s:%d\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
-    dyad_setTimeout(e->stream, STREAM_TIMEOUT);
 
     //Let work distribution know that this elevator is available
     unsigned int const id = ip2elId(dyad_getAddress(e->stream));
+    if (id == -1) {
+        return;
+    }
     ElevatorStatus_t status = {0, 0, 0, 0, true, IDLE, DIRN_STOP};
     wd_updateElevStatus(status, id);
 }
 
-static void onError(dyad_Event* e) {
-    printf("Dyad error: %s\n", e->msg);
-    //exit(1);
-}
 
 static void onAccept(dyad_Event* e) {
     addStreamToList(e->remote);
@@ -226,10 +251,12 @@ static void onAccept(dyad_Event* e) {
     dyad_addListener(e->remote, DYAD_EVENT_CLOSE, onClose, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_ERROR, onError, NULL);
-    dyad_setTimeout(e->remote, STREAM_TIMEOUT);
 
     //Let work distribution know that this elevator is available
     unsigned int const id = ip2elId(dyad_getAddress(e->remote));
+    if (id == -1) {
+        return;
+    }
     ElevatorStatus_t status = {0, 0, 0, 0, true, IDLE, DIRN_STOP};
     wd_updateElevStatus(status, id);
 
@@ -245,7 +272,9 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
     }
     Msg_queue_node_t* node = STAILQ_FIRST(&outgoing_messages_queue);
     for (unsigned int i = 0; i < NUM_ELEVATORS; ++i) {
-        if (stream_list[i] == NULL) continue;
+        dyad_Stream* s = stream_list[i];
+        if (s == NULL) continue;
+        if (dyad_getState(s) != DYAD_STATE_CONNECTED) continue;
         dyad_write(stream_list[i], node->message, node->length);
     }
 
@@ -254,8 +283,34 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
     free(node);
 }
 
+static void connectToPeers(void) {
+    for ( unsigned int id = 0; id < NUM_ELEVATORS; ++id) {
+        if ( id == my_id ) {
+            continue;
+        }
+        char const * ip = elevator_list[id].ip;
+        uint16_t const port = elevator_list[id].port;
+        if ( stream_list[id] == NULL) {
+            dyad_Stream* s = dyad_newStream();
+
+            dyad_addListener(s, DYAD_EVENT_CONNECT, onConnect, NULL);
+            dyad_addListener(s, DYAD_EVENT_CLOSE, onClose, NULL);
+
+            //printf("Connecting to: %s:%d\n", ip, port);
+            stream_list[id] = s;
+            dyad_connect(s, ip, port);
+        }
+        int stream_state = dyad_getState(stream_list[id]);
+        if (stream_state != DYAD_STATE_CONNECTED && stream_state != DYAD_STATE_CONNECTING) {
+            //printf("Connecting to: %s:%d\n", ip, port);
+            dyad_connect(stream_list[id], elevator_list[id].ip, elevator_list[id].port);
+        }
+    }
+}
+
 static void* workerThread() {
     while (true) {
+        connectToPeers();
         popAndBroadcast(&outgoing_messages_queue);
         usleep(1);
         dyad_update();
@@ -316,6 +371,7 @@ void populateElevatorList(void) {
         }
         elevator_list[id].id = id;
         elevator_list[id].port = port;
+        elevator_list[id].connected = false;
         strcpy(elevator_list[id].ip, ip);
         ++el_configs_read;
     }
@@ -363,7 +419,16 @@ void net_init(unsigned int const _my_id) {
         if (id == my_id) continue;
         char const * hostname = elevator_list[i].ip;
         uint16_t const port = elevator_list[i].port;
-        net_connect(hostname, port);
+        //net_connect(hostname, port);
+/*
+        dyad_Stream* s = dyad_newStream();
+        dyad_addListener(s, DYAD_EVENT_CONNECT, onConnect, NULL);
+        dyad_addListener(s, DYAD_EVENT_CLOSE, onClose, NULL);
+        dyad_addListener(s, DYAD_EVENT_DATA, onData, NULL);
+        dyad_addListener(s, DYAD_EVENT_ERROR, onError, NULL);
+        printf("Connecting to: %s:%d\n", hostname, port);
+        dyad_connect(s, hostname, port);
+*/
     }
     //Listen for incoming connections
     char const * my_ip = elevator_list[my_id].ip;
