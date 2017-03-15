@@ -220,7 +220,7 @@ static void onClose(dyad_Event* e) {
     removeStreamFromList(e->stream);
     //printf("Attempting to reconnect to %s:%d\n", dyad_getAddress(e->stream), dyad_getPort(e->stream));
     //usleep(100000);
-    //dyad_connect(e->stream, dyad_getAddress(e->stream), dyad_getPort(e->stream));
+    dyad_connect(e->stream, dyad_getAddress(e->stream), dyad_getPort(e->stream));
 }
 
 static void onError(dyad_Event* e) {
@@ -302,19 +302,26 @@ static void connectToPeers(void) {
         }
         int stream_state = dyad_getState(stream_list[id]);
         if (stream_state != DYAD_STATE_CONNECTED && stream_state != DYAD_STATE_CONNECTING) {
-            //printf("Connecting to: %s:%d\n", ip, port);
+            printf("Connecting to: %s:%d\n", ip, port);
             dyad_connect(stream_list[id], elevator_list[id].ip, elevator_list[id].port);
         }
     }
 }
 
 static void* workerThread() {
+    clock_t connect_time = 0.5*CLOCKS_PER_SEC; //clock cycles
+    clock_t start_time = clock();
+    clock_t diff = 0;
     while (true) {
+        while ( diff < connect_time) {
+            popAndBroadcast(&outgoing_messages_queue);
+            usleep(1);
+            dyad_update();
+            diff = clock() - start_time;
+        }
         connectToPeers();
-        popAndBroadcast(&outgoing_messages_queue);
-        usleep(1);
-        dyad_update();
-        //Sleep a bit so that the process doesn't consume too much cpu time
+        start_time = clock();
+        diff = 0;
     }
     dyad_shutdown();
     pthread_exit(NULL);
