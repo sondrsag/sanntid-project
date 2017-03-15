@@ -11,11 +11,6 @@
 #include <stdbool.h>
 #include "work_distribution.h"
 
-//#define SIZE_OF_JOB_STRING 100
-//#define SIZE_OF_CALLSLIST_STRING 100
-//#define SIZE_OF_ELEVATORSTATUS_STRING 100
-#define MESSAGE_LENGTH 64*NUM_FLOORS
-
 static bool elcom_just_started;
 
 static void printMessage(char* message, size_t length) {
@@ -138,12 +133,6 @@ static void deserializeMessageAndDistribute(Message_type_t message_type,
 
 static void* workerThread() {
     char received_msg[1024];
-
-//    Job_t test_job = {0, BUTTON_CALL_UP, false, 0};
-
-//    ElevatorStatus_t status_test = {0, 0, 0, 0, 0, IDLE, DIRN_STOP};
-
-//    int last_status_update[NUM_ELEVATORS];
 
     size_t received_msg_length;
 
