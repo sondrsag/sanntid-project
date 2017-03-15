@@ -85,26 +85,26 @@ void msg_queue_newMessage(Msg_queue_head_t * queue, char const * message, size_t
 }
 
 
-static unsigned int num_connected_streams;
+//static unsigned int num_connected_streams;
 
-static dyad_Stream* stream_list[NUM_ELEVATORS];
+//static dyad_Stream* stream_list[NUM_ELEVATORS];
 
 int ip2elId(char const * ip);
 
 static void addStreamToList(dyad_Stream* s) {
     int id = ip2elId(dyad_getAddress(s));
     elevator_list[id].stream = s;
-    stream_list[id] = s;
-    ++num_connected_streams;
+    //stream_list[id] = s;
+    //++num_connected_streams;
 }
 
 static void removeStreamFromList(dyad_Stream* s) {
     //Find index of stream in list
     char const * ip = dyad_getAddress(s);
     int id = ip2elId(ip);
-    stream_list[id] = NULL;
+    //stream_list[id] = NULL;
     elevator_list[id].stream = NULL;
-    --num_connected_streams;
+    //--num_connected_streams;
 }
 
 int ip2elId(char const * ip) {
@@ -211,8 +211,9 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
     }
     Msg_queue_node_t* node = STAILQ_FIRST(&outgoing_messages_queue);
     for (unsigned int i = 0; i < NUM_ELEVATORS; ++i) {
-        if (stream_list[i] == NULL) continue;
-        dyad_write(stream_list[i], node->message, node->length);
+        if (elevator_list[i].stream == NULL) continue;
+        if (dyad_getState(elevator_list[i].stream) != DYAD_STATE_CONNECTED) continue;
+        dyad_write(elevator_list[i].stream, node->message, node->length);
     }
 
     STAILQ_REMOVE_HEAD(queue, messages);
