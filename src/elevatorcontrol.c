@@ -3,7 +3,7 @@
     -  Add timeout checks. In case the elevator stops (is hold still), so it
      technically hasn't crashed but still doesn't move.
     -  Pass internal jobs on to maincontrol, but start the job at once.
-*/
+ */
 #include "elevatorcontrol.h"
 #include <assert.h>
 #include <pthread.h>
@@ -13,10 +13,10 @@
 #include <unistd.h>
 
 #define MAX_JOBS 20
-static Job_t           jobs[MAX_JOBS];
-static unsigned int    num_jobs;    // Number of pending jobs
-static ElevatorStatus_t  status;
-static pthread_mutex_t ectr_mtx;
+static Job_t            jobs[MAX_JOBS];
+static unsigned int     num_jobs;   // Number of pending jobs
+static ElevatorStatus_t status;
+static pthread_mutex_t  ectr_mtx;
 
 void (*updateStatus)(ElevatorStatus_t);   // control module callback
 void (*sendJob)(Job_t);                 // control module callback
@@ -37,6 +37,7 @@ void ectr_start(UpdateStatusCallback_t stat_callback,
 
 void* runElevatorcontrol()
 {
+    // Setup module variables
     pthread_mutex_lock(&ectr_mtx);
     num_jobs = 0;
     memset(jobs, 0, MAX_JOBS * sizeof(Job_t));
@@ -56,6 +57,16 @@ void* runElevatorcontrol()
     int   num;
     Job_t top_job;
     while (1) {
+        /***********************************************************************
+
+
+            Elevatorcontrol thread's main loop:
+            Check if the driver should get a new job or change current job.
+            If the driver recently finished a job the work_distribution is
+            alerted.
+
+
+        ***********************************************************************/
         pthread_mutex_lock(&ectr_mtx);
         working    = status.working;
         finished   = status.finished;
@@ -67,13 +78,12 @@ void* runElevatorcontrol()
         if (!working) {
             if (finished) {
                 pthread_mutex_lock(&ectr_mtx);
-                assert(("Finished a job without any registered jobs",
-                        num_jobs > 0));
+                assert(num_jobs > 0);
                 num_jobs--;
-                num     = num_jobs;
+                num = num_jobs;
 
-		top_job.finished = true;
-		sendJob(top_job);
+                top_job.finished = true;
+                sendJob(top_job);
 
                 top_job = (num_jobs > 0) ? jobs[num_jobs - 1] : top_job;
 
@@ -96,7 +106,7 @@ void* runElevatorcontrol()
 
 void ectr_updateStatus(ElevatorStatus_t new_status)
 {
-	pthread_mutex_lock(&ectr_mtx);
+    pthread_mutex_lock(&ectr_mtx);
     status = new_status;
     pthread_mutex_unlock(&ectr_mtx);
     updateStatus(new_status);
@@ -104,6 +114,7 @@ void ectr_updateStatus(ElevatorStatus_t new_status)
 
 bool putFirst(Job_t job)
 {
+    // Helper function for findPosition()
     bool ret = false;
     pthread_mutex_lock(&ectr_mtx);
     if (num_jobs == 0) {
@@ -122,6 +133,14 @@ bool putFirst(Job_t job)
 
 bool goodPos(Job_t job, size_t pos)
 {
+    /***************************************************************************
+
+
+        Helper function for findPosition()
+        Checks if the job should be placed between the job at pos and pos - 1
+
+
+    ***************************************************************************/
     pthread_mutex_lock(&ectr_mtx);
     int floor_a  = jobs[pos].floor;
     int button_a = jobs[pos].button;
@@ -130,7 +149,6 @@ bool goodPos(Job_t job, size_t pos)
     pthread_mutex_unlock(&ectr_mtx);
     bool ret = false;
 
-    // printf("------------\n");
     if (button_a == BUTTON_CALL_UP && job.button == BUTTON_CALL_UP &&
         job.floor > floor_a && floor_b > job.floor) {
         // puts("Ny jobb: mellom a og b, oppover");
@@ -175,9 +193,6 @@ bool goodPos(Job_t job, size_t pos)
         ret = true;
     }
 
-    // printf("floor a\t\t%d\nbutton a\t%d\nfloor b\t\t%d\njob btn\t\t%d\njob floor\t%d\nposition\t%d\nreturn\t\t%d\n",
-    //        floor_a, button_a, floor_b, job.button, job.floor, pos, ret);
-
     return ret;
 } /* goodPos */
 
@@ -199,13 +214,11 @@ size_t findPosition(Job_t job)
 
 void insertJob(Job_t job, size_t pos)
 {
-    assert(("Inserting job at invalid position",
-            pos < MAX_JOBS));
+    assert(pos < MAX_JOBS);
     pthread_mutex_lock(&ectr_mtx);
     if (num_jobs == MAX_JOBS) return;
 
     for (size_t i = num_jobs; i > pos; i--) {
-        jobs[i] = jobs[i - 1];
         jobs[i] = jobs[i - 1];
     }
 
@@ -218,8 +231,17 @@ void insertJob(Job_t job, size_t pos)
 
 bool validJob(Job_t job)
 {
-    assert(("Job validation: floor out of bounds",
-            job.floor >= 0 && job.floor < N_FLOORS));
+    /***************************************************************************
+
+
+        Checks if the job is a duplicate of a job in the stack.
+        If job is external it replaces the first internal job in the stack it
+        encounters at the same floor (if job is in the right direction) and
+        returns false.
+
+
+    ***************************************************************************/
+    assert(job.floor >= 0 && job.floor < N_FLOORS);
     pthread_mutex_lock(&ectr_mtx);
     bool ret = true;
 
@@ -272,7 +294,7 @@ void ectr_receiveJob(Job_t job)
 {
     if (job.button == BUTTON_COMMAND) {
         ectr_handleJob(job);
-		sendJob(job);
+        sendJob(job);
     } else {
         sendJob(job);
     }

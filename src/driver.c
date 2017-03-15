@@ -43,6 +43,7 @@ void* runDriver()
 
     ***************************************************************************/
     elev_init(ET_Simulation);
+    // elev_init(ET_Comedi);
     elev_set_motor_direction(DIRN_STOP);
 
     pthread_mutex_lock(&status_mtx);
@@ -82,7 +83,7 @@ void* runDriver()
         /***********************************************************************
 
 
-            Driver threads main loop:
+            Driver thread's main loop:
             Check progress of current job, check for a physical error and check
             if any button is pressed.
 
@@ -188,12 +189,21 @@ bool drv_startJob(Job_t job)
 
 void drv_switchLights(Job_t job, int new_val)
 {
+    assert(new_val == 0 || new_val == 1);
     elev_set_button_lamp(job.button, job.floor, new_val);
     input.lamps[job.button][job.floor] = new_val;
 }
 
 void evalJobProgress(void)
 {
+    /***************************************************************************
+
+
+        Check if elevator has reached it's destination if it's moving.
+        Check if the doors should be closed if they are open.
+
+
+    ***************************************************************************/
     pthread_mutex_lock(&status_mtx);
     switch (status.action) {
     case MOVING:
@@ -214,8 +224,6 @@ void evalJobProgress(void)
                 break;
 
             case BUTTON_COMMAND:
-                // elev_set_button_lamp(BUTTON_COMMAND, status.current_floor, 0);
-                // input.lamps[BUTTON_COMMAND][status.current_floor] = 0;
                 break;
             }
 
@@ -224,7 +232,7 @@ void evalJobProgress(void)
             elev_set_door_open_lamp(1);
             timer_start(3.0);
             updateStatus(status);
-        }         // if
+        } // if
 
         break;
 
@@ -250,13 +258,20 @@ void evalJobProgress(void)
 
 void checkButton(elev_button_type_t button, int floor)
 {
+    /***************************************************************************
+
+
+        Checks if the button input has changed since last check.
+        Tells elevatorcontrol about the call if the changed button is pressed.
+
+
+    ***************************************************************************/
     if (input.buttons[button][floor] != elev_get_button_signal(button, floor)) {
         input.buttons[button][floor] = elev_get_button_signal(button, floor);
 
         if (input.buttons[button][floor] != 0) {
-            assert(("Invalid button input",
-                    (button != BUTTON_CALL_DOWN || floor != 0) &&
-                    (button != BUTTON_CALL_UP || floor != N_FLOORS - 1)));
+            assert((button != BUTTON_CALL_DOWN || floor != 0) &&
+                   (button != BUTTON_CALL_UP || floor != N_FLOORS - 1));
 
             Job_t new_job;
             new_job.floor  = floor;
@@ -274,6 +289,7 @@ void checkButton(elev_button_type_t button, int floor)
 void checkInputs(void)
 {
     pthread_mutex_lock(&status_mtx);
+    // Update current floor only when it's not in between floors
     if (status.current_floor != elev_get_floor_sensor_signal() &&
         elev_get_floor_sensor_signal() != -1) {
         status.current_floor = elev_get_floor_sensor_signal();
@@ -281,7 +297,6 @@ void checkInputs(void)
     }
     pthread_mutex_unlock(&status_mtx);
 
-    // Check every button for change in input
     for (size_t f = 0; f < N_FLOORS; f++) {
         for (size_t b = 0; b < N_BUTTONS; b++) {
             checkButton(b, f);
