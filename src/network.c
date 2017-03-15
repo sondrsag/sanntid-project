@@ -11,7 +11,6 @@
 #include <pthread.h>
 #include "dyad.h"
 #include "network.h"
-#include "msg_queue.h"
 #include "utils.h"
 #include "globals.h"
 #include "utils.h"
@@ -28,6 +27,7 @@ typedef struct elevatorInfo {
     char ip[SIZE_IP];
     uint16_t port;
     unsigned int id;
+    dyad_Stream* stream;
 } ElevatorInfo_t;
 
 typedef struct Msg_queue_node {
@@ -46,16 +46,11 @@ typedef struct Msg_queue_head Msg_queue_head_t;
 static Msg_queue_head_t incoming_messages_queue;
 static Msg_queue_head_t outgoing_messages_queue;
 
-//This list holds IP-adresses of elevators. Add 1 for \0
-//char elevator_ip_list[NUM_ELEVATORS][SIZE_IP + 1];
 static ElevatorInfo_t elevator_list[NUM_ELEVATORS];
-
-
 
 pthread_mutex_t msg_mutex;
 pthread_mutex_t module_mutex;
 pthread_mutex_t stream_mutex;
-Mutex_t * dyad_mutex;
 
 static unsigned int my_id;
 
@@ -98,6 +93,7 @@ int ip2elId(char const * ip);
 
 static void addStreamToList(dyad_Stream* s) {
     int id = ip2elId(dyad_getAddress(s));
+    elevator_list[id].stream = s;
     stream_list[id] = s;
     ++num_connected_streams;
 }
@@ -107,6 +103,7 @@ static void removeStreamFromList(dyad_Stream* s) {
     char const * ip = dyad_getAddress(s);
     int id = ip2elId(ip);
     stream_list[id] = NULL;
+    elevator_list[id].stream = NULL;
     --num_connected_streams;
 }
 
@@ -168,9 +165,11 @@ static void onConnect(dyad_Event* e) {
 
 static void onError(dyad_Event* e) {
     printf("Dyad error: %s\n", e->msg);
+    dyad_removeAllListeners(e->stream, DYAD_EVENT_CLOSE);
 }
 
 static void onAccept(dyad_Event* e) {
+/*
     addStreamToList(e->remote);
     printf("Accepted connection from %s:%d\n",dyad_getAddress(e->remote), dyad_getPort(e->remote));
     dyad_addListener(e->remote, DYAD_EVENT_CLOSE, onClose, NULL);
@@ -182,9 +181,24 @@ static void onAccept(dyad_Event* e) {
     unsigned int const id = ip2elId(dyad_getAddress(e->remote));
     ElevatorStatus_t status = {0, 0, 0, 0, true, IDLE, DIRN_STOP};
     wd_updateElevStatus(status, id);
-
+*/
 }  
 
+static void connectToPeers() {
+    for (unsigned int id = 0; id < NUM_ELEVATORS; ++id) {
+        if (id == my_id) continue;
+        if (elevator_list[id].stream == NULL) {
+            elevator_list[id].stream = dyad_newStream();
+        }
+        char* ip = elevator_list[id].ip;
+        uint16_t port = elevator_list[id].port;
+        dyad_Stream* stream = elevator_list[id].stream;
+        int stream_state = dyad_getState(stream);
+        if (stream_state != DYAD_STATE_CONNECTED && stream_state != DYAD_STATE_CONNECTING ) {
+            dyad_connect(stream, ip, port);
+        }
+    }
+}
 
 static void popAndBroadcast(Msg_queue_head_t * queue) {
 
@@ -206,6 +220,7 @@ static void popAndBroadcast(Msg_queue_head_t * queue) {
 
 static void* workerThread() {
     while (true) {
+        connectToPeers();
         popAndBroadcast(&outgoing_messages_queue);
         //Sleep a bit so that the process doesn't consume too much cpu time
         usleep(1);
@@ -277,7 +292,6 @@ void net_init(unsigned int const _my_id) {
         printf("\n mutex init failed\n");
         exit(1);
     }
-    dyad_mutex = mutex_make();
 
     STAILQ_INIT(&incoming_messages_queue);
     STAILQ_INIT(&outgoing_messages_queue);
@@ -339,16 +353,16 @@ void net_connect(char const * hostname, uint16_t const port) {
     dyad_Stream* s = dyad_newStream();
     dyad_addListener(s, DYAD_EVENT_CONNECT, onConnect, NULL);
     dyad_addListener(s, DYAD_EVENT_ERROR, onError, NULL);
+    dyad_addListener(s, DYAD_EVENT_CLOSE, onClose, NULL);
+    dyad_addListener(s, DYAD_EVENT_DATA, onData, NULL);
     printf("Trying to connect to %s:%d ...\n", hostname, port);
     int ret = tryConnect(s, hostname, port);
     if (ret) {
         printf("No server found\n");
-        dyad_close(s);
+        //dyad_close(s);
     }
     else {
         printf("Server found\n");
-        dyad_addListener(s, DYAD_EVENT_CLOSE, onClose, NULL);
-        dyad_addListener(s, DYAD_EVENT_DATA, onData, NULL);
     }
 }
 
