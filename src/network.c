@@ -169,11 +169,11 @@ static void onError(dyad_Event* e) {
 }
 
 static void onAccept(dyad_Event* e) {
+    printf("Accepted connection from %s:%d\n",dyad_getAddress(e->remote), dyad_getPort(e->remote));
+    dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, NULL);
+    dyad_addListener(e->remote, DYAD_EVENT_CLOSE, onClose, NULL);
 /*
     addStreamToList(e->remote);
-    printf("Accepted connection from %s:%d\n",dyad_getAddress(e->remote), dyad_getPort(e->remote));
-    dyad_addListener(e->remote, DYAD_EVENT_CLOSE, onClose, NULL);
-    dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, NULL);
     dyad_addListener(e->remote, DYAD_EVENT_ERROR, onError, NULL);
     dyad_setTimeout(e->remote, STREAM_TIMEOUT);
 
@@ -187,14 +187,16 @@ static void onAccept(dyad_Event* e) {
 static void connectToPeers() {
     for (unsigned int id = 0; id < NUM_ELEVATORS; ++id) {
         if (id == my_id) continue;
-        if (elevator_list[id].stream == NULL) {
-            elevator_list[id].stream = dyad_newStream();
-        }
         char* ip = elevator_list[id].ip;
         uint16_t port = elevator_list[id].port;
+        if (elevator_list[id].stream == NULL) {
+            elevator_list[id].stream = dyad_newStream();
+            dyad_connect(elevator_list[id].stream, ip, port);
+        }
         dyad_Stream* stream = elevator_list[id].stream;
         int stream_state = dyad_getState(stream);
         if (stream_state != DYAD_STATE_CONNECTED && stream_state != DYAD_STATE_CONNECTING ) {
+            elevator_list[id].stream = dyad_newStream();
             dyad_connect(stream, ip, port);
         }
     }
@@ -407,7 +409,7 @@ int net_getMasterId(void) {
         if (id == my_id ) {
             break;
         }   
-        if(stream_list[id] !=NULL) {
+        if(dyad_getState(elevator_list[id].stream) == DYAD_STATE_CONNECTED) {
             break;
         }
     }
